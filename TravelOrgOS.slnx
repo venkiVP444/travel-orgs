@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TravelOrgOS.Api/TravelOrgOS.Api.csproj" />
+    <Project Path="src/TravelOrgOS.Domain/TravelOrgOS.Domain.csproj" />
+    <Project Path="src/TravelOrgOS.Infrastructure/TravelOrgOS.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TravelOrgOS.Api.Tests/TravelOrgOS.Api.Tests.csproj" />
+  </Folder>
+</Solution>

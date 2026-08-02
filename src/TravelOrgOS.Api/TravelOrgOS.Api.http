@@ -1,0 +1,6 @@
+@TravelOrgOS.Api_HostAddress = http://localhost:5199
+
+GET {{TravelOrgOS.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

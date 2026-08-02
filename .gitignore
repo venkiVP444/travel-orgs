@@ -1,0 +1,23 @@
+# .NET & Visual Studio
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node & Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log
+yarn-error.log
+
+# Database
+*.mdf
+*.ldf
+
+# Environment
+appsettings.Production.json
+appsettings.local.json
