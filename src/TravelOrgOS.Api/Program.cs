@@ -9,7 +9,7 @@ using TravelOrgOS.Infrastructure.Services.PaymentGateways;
 var builder = WebApplication.CreateBuilder(args);
 
 // Load local appsettings file if present
-builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
+builder.Configuration.AddJsonFile(Path.Combine(builder.Environment.ContentRootPath, "appsettings.local.json"), optional: true, reloadOnChange: true);
 
 // 1. Read and Assert Database Connection Safety
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
