@@ -273,10 +273,68 @@ export class PortalBookingComponent implements OnInit {
         // Initiate Gateway Session
         this.apiService.initiatePortalPayment(this.slug, booking.id, this.paymentProvider, this.paymentType, amountToPay).subscribe({
           next: (session) => {
-            this.submitting = false;
-            if (session.checkoutUrl && this.paymentProvider !== 'Mock') {
-              window.location.href = session.checkoutUrl;
+            if (this.paymentProvider === 'Stripe') {
+              this.submitting = false;
+              if (session.checkoutUrl) {
+                window.location.href = session.checkoutUrl;
+              } else {
+                this.errorMessage = 'Failed to retrieve Stripe checkout session URL.';
+              }
+            } else if (this.paymentProvider === 'Razorpay') {
+              const options = {
+                key: session.publishableKey,
+                amount: amountToPay * 100, // paise
+                currency: session.currency || 'INR',
+                name: 'TravelOrgOS',
+                description: `Booking Reference: ${booking.bookingReference}`,
+                order_id: session.providerOrderId,
+                handler: (response: any) => {
+                  this.submitting = true;
+                  const verificationPayload = {
+                    bookingId: booking.id,
+                    orderId: response.razorpay_order_id,
+                    paymentId: response.razorpay_payment_id,
+                    signature: response.razorpay_signature,
+                    transactionReference: session.transactionReference,
+                    paymentType: this.paymentType,
+                    amount: amountToPay
+                  };
+
+                  this.apiService.verifyRazorpayPayment(verificationPayload).subscribe({
+                    next: () => {
+                      this.submitting = false;
+                      this.router.navigate(['/portal', this.slug, 'payment-return'], {
+                        queryParams: {
+                          bookingId: booking.id,
+                          status: 'success',
+                          txnRef: session.transactionReference,
+                          provider: 'Razorpay'
+                        }
+                      });
+                    },
+                    error: (verError) => {
+                      this.submitting = false;
+                      this.errorMessage = 'Payment completed, but verification failed. Please contact customer support.';
+                    }
+                  });
+                },
+                prefill: {
+                  email: this.contactEmail,
+                  contact: this.contactPhone
+                },
+                theme: {
+                  color: '#1E88E5'
+                },
+                modal: {
+                  ondismiss: () => {
+                    this.submitting = false;
+                  }
+                }
+              };
+              const rzp = new (window as any).Razorpay(options);
+              rzp.open();
             } else {
+              this.submitting = false;
               // Direct navigation to return status page for mock gateway or instant verification
               this.router.navigate(['/portal', this.slug, 'payment-return'], {
                 queryParams: { bookingId: booking.id, status: 'success', txnRef: session.transactionReference, provider: this.paymentProvider }

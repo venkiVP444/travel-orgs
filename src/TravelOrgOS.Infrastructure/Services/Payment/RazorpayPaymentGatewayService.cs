@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Razorpay.Api;
 using TravelOrgOS.Api.DTOs;
 
 namespace TravelOrgOS.Infrastructure.Services.PaymentGateways;
@@ -33,7 +37,29 @@ public class RazorpayPaymentGatewayService : IPaymentGatewayService
         string? cancelUrl = null)
     {
         var txnRef = $"TXN-RZP-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-        var orderId = $"order_{Guid.NewGuid():N}";
+        
+        // Instantiate Razorpay Client
+        var client = new RazorpayClient(_keyId, _keySecret);
+
+        var options = new Dictionary<string, object>
+        {
+            { "amount", (int)(amount * 100) }, // amount in paise
+            { "currency", currency.ToUpper() },
+            { "receipt", txnRef },
+            { "payment_capture", 1 }, // Auto capture
+            { "notes", new Dictionary<string, string>
+                {
+                    { "bookingId", bookingId.ToString() },
+                    { "transactionReference", txnRef },
+                    { "paymentType", paymentType }
+                }
+            }
+        };
+
+        Order order = client.Order.Create(options);
+        var orderId = order["id"].ToString();
+
+        var redirectUrl = successUrl ?? $"http://localhost:4400/portal/demo-travel/payment-return?bookingId={bookingId}&status=success&txnRef={txnRef}&provider=Razorpay";
 
         return Task.FromResult(new PaymentCheckoutSessionDto(
             Provider: ProviderName,
@@ -41,9 +67,9 @@ public class RazorpayPaymentGatewayService : IPaymentGatewayService
             BookingId: bookingId,
             BookingReference: bookingReference,
             Amount: amount,
-            Currency: currency.Equals("INR", StringComparison.OrdinalIgnoreCase) ? "INR" : currency.ToUpper(),
+            Currency: currency.ToUpper(),
             TransactionReference: txnRef,
-            CheckoutUrl: successUrl ?? $"http://localhost:4400/portal/demo-travel/payment-return?bookingId={bookingId}&status=success&txnRef={txnRef}&provider=Razorpay",
+            CheckoutUrl: redirectUrl,
             ProviderOrderId: orderId,
             PublishableKey: _keyId,
             Message: "Razorpay order initialized successfully."
@@ -83,7 +109,11 @@ public class RazorpayPaymentGatewayService : IPaymentGatewayService
         var paymentEntity = payload.TryGetProperty("payment", out var pProp) && pProp.TryGetProperty("entity", out var peProp) ? peProp : root;
         var orderEntity = payload.TryGetProperty("order", out var oProp) && oProp.TryGetProperty("entity", out var oeProp) ? oeProp : root;
 
-        var txnRef = paymentEntity.TryGetProperty("notes", out var pNotes) && pNotes.TryGetProperty("transactionReference", out var trProp) ? trProp.GetString() ?? "" : "";
+        var txnRef = "";
+        if (paymentEntity.TryGetProperty("notes", out var pNotes) && pNotes.TryGetProperty("transactionReference", out var trProp))
+        {
+            txnRef = trProp.GetString() ?? "";
+        }
         if (string.IsNullOrWhiteSpace(txnRef) && orderEntity.TryGetProperty("receipt", out var rcpProp))
         {
             txnRef = rcpProp.GetString() ?? "";
@@ -96,24 +126,26 @@ public class RazorpayPaymentGatewayService : IPaymentGatewayService
         var providerTxnId = paymentEntity.TryGetProperty("id", out var payIdProp) ? payIdProp.GetString() : $"pay_rzp_{Guid.NewGuid():N}";
 
         Guid bookingId = Guid.Empty;
-        if (paymentEntity.TryGetProperty("notes", out var pNotes2) && pNotes2.TryGetProperty("bookingId", out var bIdProp) && Guid.TryParse(bIdProp.GetString(), out var parsedBId))
+        if (paymentEntity.TryGetProperty("notes", out var pNotes2) && pNotes2.TryGetProperty("bookingId", out var bIdProp))
         {
-            bookingId = parsedBId;
-        }
-        else if (root.TryGetProperty("bookingId", out var directBIdProp) && Guid.TryParse(directBIdProp.GetString(), out var directBId))
-        {
-            bookingId = directBId;
+            Guid.TryParse(bIdProp.GetString(), out bookingId);
         }
 
         decimal amount = 0m;
         if (paymentEntity.TryGetProperty("amount", out var amProp))
         {
-            amount = amProp.GetDecimal() / 100m; // Razorpay amounts in paise
+            amount = amProp.GetDecimal() / 100m; // in Rupees from Paise
         }
 
         var currency = paymentEntity.TryGetProperty("currency", out var curProp) ? curProp.GetString()?.ToUpper() ?? "INR" : "INR";
         var isSuccess = !eventType.Contains("failed", StringComparison.OrdinalIgnoreCase);
         var failureReason = isSuccess ? null : "Payment failed on Razorpay.";
+        
+        string paymentType = "Full";
+        if (paymentEntity.TryGetProperty("notes", out var pNotes3) && pNotes3.TryGetProperty("paymentType", out var ptProp))
+        {
+            paymentType = ptProp.GetString() ?? "Full";
+        }
 
         return new PaymentWebhookEvent(
             Provider: ProviderName,
@@ -123,7 +155,7 @@ public class RazorpayPaymentGatewayService : IPaymentGatewayService
             BookingId: bookingId,
             Amount: amount,
             Currency: currency,
-            PaymentType: "Full",
+            PaymentType: paymentType,
             IsSuccess: isSuccess,
             FailureReason: failureReason,
             RawBody: body

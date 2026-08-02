@@ -1,7 +1,9 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Stripe;
+using Stripe.Checkout;
 using TravelOrgOS.Api.DTOs;
 
 namespace TravelOrgOS.Infrastructure.Services.PaymentGateways;
@@ -19,9 +21,11 @@ public class StripePaymentGatewayService : IPaymentGatewayService
         _apiKey = configuration["PaymentGateway:Stripe:ApiKey"] ?? "sk_test_mock_stripe_key";
         _publishableKey = configuration["PaymentGateway:Stripe:PublishableKey"] ?? "pk_test_mock_stripe_key";
         _webhookSecret = configuration["PaymentGateway:Stripe:WebhookSecret"] ?? "whsec_mock_stripe_secret";
+        
+        StripeConfiguration.ApiKey = _apiKey;
     }
 
-    public Task<PaymentCheckoutSessionDto> CreateCheckoutSessionAsync(
+    public async Task<PaymentCheckoutSessionDto> CreateCheckoutSessionAsync(
         Guid orgId,
         Guid bookingId,
         string bookingReference,
@@ -33,11 +37,47 @@ public class StripePaymentGatewayService : IPaymentGatewayService
         string? cancelUrl = null)
     {
         var txnRef = $"TXN-STRIPE-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-        var providerOrderId = $"cs_test_{Guid.NewGuid():N}";
         
-        var redirectUrl = successUrl ?? $"http://localhost:4400/portal/demo-travel/payment-return?bookingId={bookingId}&status=success&txnRef={txnRef}&provider=Stripe";
+        var redirectSuccessUrl = successUrl ?? $"http://localhost:4400/portal/demo-travel/payment-return?bookingId={bookingId}&status=success&txnRef={txnRef}&provider=Stripe";
+        var redirectCancelUrl = cancelUrl ?? $"http://localhost:4400/portal/demo-travel/payment-return?bookingId={bookingId}&status=cancel&txnRef={txnRef}&provider=Stripe";
 
-        return Task.FromResult(new PaymentCheckoutSessionDto(
+        var options = new SessionCreateOptions
+        {
+            PaymentMethodTypes = new List<string> { "card" },
+            CustomerEmail = contactEmail,
+            LineItems = new List<SessionLineItemOptions>
+            {
+                new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        UnitAmount = (long)(amount * 100), // Stripe amount in cents
+                        Currency = currency.ToLower(),
+                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        {
+                            Name = $"Trip Booking Reference: {bookingReference}",
+                            Description = $"Payment Preference: {paymentType}"
+                        },
+                    },
+                    Quantity = 1,
+                },
+            },
+            Mode = "payment",
+            SuccessUrl = redirectSuccessUrl,
+            CancelUrl = redirectCancelUrl,
+            ClientReferenceId = txnRef,
+            Metadata = new Dictionary<string, string>
+            {
+                { "bookingId", bookingId.ToString() },
+                { "transactionReference", txnRef },
+                { "paymentType", paymentType }
+            }
+        };
+
+        var service = new SessionService();
+        Session session = await service.CreateAsync(options);
+
+        return new PaymentCheckoutSessionDto(
             Provider: ProviderName,
             PaymentType: paymentType,
             BookingId: bookingId,
@@ -45,11 +85,11 @@ public class StripePaymentGatewayService : IPaymentGatewayService
             Amount: amount,
             Currency: currency.ToUpper(),
             TransactionReference: txnRef,
-            CheckoutUrl: redirectUrl,
-            ProviderOrderId: providerOrderId,
+            CheckoutUrl: session.Url,
+            ProviderOrderId: session.Id,
             PublishableKey: _publishableKey,
             Message: "Stripe checkout session initialized successfully."
-        ));
+        );
     }
 
     public bool VerifyWebhookSignature(string body, string signatureHeader, string? secretOverride = null)
@@ -61,23 +101,8 @@ public class StripePaymentGatewayService : IPaymentGatewayService
 
         try
         {
-            // Parse Stripe-Signature header: t=12345,v1=signature
-            var items = signatureHeader.Split(',')
-                .Select(part => part.Split('=', 2))
-                .Where(parts => parts.Length == 2)
-                .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
-
-            if (!items.TryGetValue("t", out var timestamp) || !items.TryGetValue("v1", out var signature))
-            {
-                return false;
-            }
-
-            var payload = $"{timestamp}.{body}";
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-            var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
-            var computedSignature = Convert.ToHexString(hashBytes).ToLower();
-
-            return signature.Equals(computedSignature, StringComparison.OrdinalIgnoreCase);
+            var stripeEvent = EventUtility.ConstructEvent(body, signatureHeader, secret);
+            return stripeEvent != null;
         }
         catch
         {
@@ -87,62 +112,61 @@ public class StripePaymentGatewayService : IPaymentGatewayService
 
     public PaymentWebhookEvent ParseWebhookEvent(string body)
     {
-        using var doc = JsonDocument.Parse(body);
-        var root = doc.RootElement;
+        var stripeEvent = EventUtility.ParseEvent(body);
+        var eventId = stripeEvent.Id;
+        var eventType = stripeEvent.Type;
 
-        var eventId = root.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? $"evt_stripe_{Guid.NewGuid():N}" : $"evt_stripe_{Guid.NewGuid():N}";
-        var eventType = root.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "checkout.session.completed" : "checkout.session.completed";
-
-        var dataObj = root.TryGetProperty("data", out var dataProp) && dataProp.TryGetProperty("object", out var objProp) ? objProp : root;
-
-        var txnRef = dataObj.TryGetProperty("client_reference_id", out var refProp) ? refProp.GetString() ?? "" : "";
-        if (string.IsNullOrWhiteSpace(txnRef) && dataObj.TryGetProperty("metadata", out var metaProp))
+        if (eventType == Events.CheckoutSessionCompleted)
         {
-            txnRef = metaProp.TryGetProperty("transactionReference", out var metaTxProp) ? metaTxProp.GetString() ?? "" : "";
-        }
-        if (string.IsNullOrWhiteSpace(txnRef))
-        {
-            txnRef = $"TXN-STRIPE-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-        }
+            var session = stripeEvent.Data.Object as Session;
+            var txnRef = session?.ClientReferenceId ?? "";
+            var providerTxnId = session?.PaymentIntentId ?? session?.Id ?? "";
+            
+            Guid bookingId = Guid.Empty;
+            if (session?.Metadata != null && session.Metadata.TryGetValue("bookingId", out var bIdStr))
+            {
+                Guid.TryParse(bIdStr, out bookingId);
+            }
 
-        var providerTxnId = dataObj.TryGetProperty("payment_intent", out var piProp) ? piProp.GetString() : dataObj.TryGetProperty("id", out var dIdProp) ? dIdProp.GetString() : $"pi_stripe_{Guid.NewGuid():N}";
+            decimal amount = (session?.AmountTotal ?? 0) / 100m;
+            var currency = session?.Currency?.ToUpper() ?? "USD";
+            
+            string paymentType = "Full";
+            if (session?.Metadata != null && session.Metadata.TryGetValue("paymentType", out var ptStr))
+            {
+                paymentType = ptStr;
+            }
 
-        Guid bookingId = Guid.Empty;
-        if (dataObj.TryGetProperty("metadata", out var meta) && meta.TryGetProperty("bookingId", out var bIdProp) && Guid.TryParse(bIdProp.GetString(), out var parsedBId))
-        {
-            bookingId = parsedBId;
+            return new PaymentWebhookEvent(
+                Provider: ProviderName,
+                EventId: eventId,
+                TransactionReference: txnRef,
+                ProviderTransactionId: providerTxnId,
+                BookingId: bookingId,
+                Amount: amount,
+                Currency: currency,
+                PaymentType: paymentType,
+                IsSuccess: true,
+                FailureReason: null,
+                RawBody: body
+            );
         }
-        else if (dataObj.TryGetProperty("bookingId", out var directBIdProp) && Guid.TryParse(directBIdProp.GetString(), out var directBId))
+        else
         {
-            bookingId = directBId;
+            var txnRef = $"TXN-STRIPE-FAIL-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+            return new PaymentWebhookEvent(
+                Provider: ProviderName,
+                EventId: eventId,
+                TransactionReference: txnRef,
+                ProviderTransactionId: "",
+                BookingId: Guid.Empty,
+                Amount: 0m,
+                Currency: "USD",
+                PaymentType: "Full",
+                IsSuccess: false,
+                FailureReason: $"Unhandled webhook event: {eventType}",
+                RawBody: body
+            );
         }
-
-        decimal amount = 0m;
-        if (dataObj.TryGetProperty("amount_total", out var amTotalProp))
-        {
-            amount = amTotalProp.GetDecimal() / 100m; // Stripe amounts in cents
-        }
-        else if (dataObj.TryGetProperty("amount", out var amProp))
-        {
-            amount = amProp.GetDecimal() / 100m;
-        }
-
-        var currency = dataObj.TryGetProperty("currency", out var curProp) ? curProp.GetString()?.ToUpper() ?? "USD" : "USD";
-        var isSuccess = !eventType.Contains("failed", StringComparison.OrdinalIgnoreCase);
-        var failureReason = isSuccess ? null : "Payment attempt failed on Stripe.";
-
-        return new PaymentWebhookEvent(
-            Provider: ProviderName,
-            EventId: eventId,
-            TransactionReference: txnRef,
-            ProviderTransactionId: providerTxnId,
-            BookingId: bookingId,
-            Amount: amount,
-            Currency: currency,
-            PaymentType: "Full",
-            IsSuccess: isSuccess,
-            FailureReason: failureReason,
-            RawBody: body
-        );
     }
 }

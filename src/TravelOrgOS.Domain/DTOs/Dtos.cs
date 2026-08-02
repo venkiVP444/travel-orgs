@@ -416,3 +416,13 @@ public record ReportExportFilterDto(
     Guid? TripId,
     string? Status
 );
+
+public record RazorpayVerificationDto(
+    [Required] Guid BookingId,
+    [Required] string OrderId,
+    [Required] string PaymentId,
+    [Required] string Signature,
+    [Required] string TransactionReference,
+    [Required] string PaymentType,
+    [Required] decimal Amount
+);

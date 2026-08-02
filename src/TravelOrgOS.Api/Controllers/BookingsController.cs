@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
 using TravelOrgOS.Api.DTOs;
 using TravelOrgOS.Infrastructure.Services;
 
@@ -9,10 +12,12 @@ namespace TravelOrgOS.Api.Controllers;
 public class BookingsController : ControllerBase
 {
     private readonly IBookingService _bookingService;
+    private readonly IConfiguration _configuration;
 
-    public BookingsController(IBookingService bookingService)
+    public BookingsController(IBookingService bookingService, IConfiguration configuration)
     {
         _bookingService = bookingService;
+        _configuration = configuration;
     }
 
     private Guid GetOrgId()
@@ -157,5 +162,44 @@ public class BookingsController : ControllerBase
         var result = await _bookingService.RecordPaymentAsync(GetOrgId(), id, dto);
         if (result == null) return NotFound();
         return Ok(result);
+    }
+
+    [HttpPost("payment/verify-razorpay")]
+    public async Task<IActionResult> VerifyRazorpayPayment([FromBody] RazorpayVerificationDto dto)
+    {
+        var secret = _configuration["PaymentGateway:Razorpay:KeySecret"] ?? "mock_razorpay_secret";
+        
+        var payload = $"{dto.OrderId}|{dto.PaymentId}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        var computedSignature = Convert.ToHexString(hashBytes).ToLower();
+
+        if (!computedSignature.Equals(dto.Signature, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = "Payment signature verification failed." });
+        }
+
+        var eventId = $"evt_verify_rzp_{dto.PaymentId}";
+        var webhookEvent = new PaymentWebhookEvent(
+            Provider: "Razorpay",
+            EventId: eventId,
+            TransactionReference: dto.TransactionReference,
+            ProviderTransactionId: dto.PaymentId,
+            BookingId: dto.BookingId,
+            Amount: dto.Amount,
+            Currency: "INR",
+            PaymentType: dto.PaymentType,
+            IsSuccess: true,
+            FailureReason: null,
+            RawBody: "Direct client verification"
+        );
+
+        var processed = await _bookingService.ProcessGatewayPaymentWebhookAsync(webhookEvent);
+        if (!processed)
+        {
+            return BadRequest(new { message = "Failed to update booking ledger." });
+        }
+
+        return Ok(new { success = true });
     }
 }

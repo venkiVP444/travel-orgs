@@ -181,6 +181,10 @@ export class ApiService {
     return this.http.get<any>(`${this.baseUrl}/bookings/${bookingId}/payment-status`);
   }
 
+  verifyRazorpayPayment(verificationDto: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/bookings/payment/verify-razorpay`, verificationDto);
+  }
+
   // PORTAL ENDPOINTS
   getPortalTrips(slug: string): Observable<{ organization: Organization; trips: Trip[] }> {
     return this.http.get<{ organization: Organization; trips: Trip[] }>(`${this.baseUrl}/trips/portal/${slug}`);
