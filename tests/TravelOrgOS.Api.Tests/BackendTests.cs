@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Mvc;
 using TravelOrgOS.Api.DTOs;
 using TravelOrgOS.Domain.Entities;
 using TravelOrgOS.Domain.Enums;
@@ -324,5 +325,68 @@ public class BookingServiceTests
 
         bool isValidMock = stripeService.VerifyWebhookSignature("{\"id\":\"evt_1\"}", "valid_stripe_signature");
         Assert.True(isValidMock);
+    }
+
+    [Fact]
+    public async Task GetBookingByReference_CrossTenant_ShouldReturnNull()
+    {
+        using var context = GetInMemoryDbContext();
+        var org1 = Guid.NewGuid();
+        var org2 = Guid.NewGuid();
+
+        var trip = new Trip { Id = Guid.NewGuid(), OrganizationId = org1, TripCode = "REFTEST", TripName = "Ref Trip", BasePrice = 500m, AvailableSeats = 5 };
+        context.Trips.Add(trip);
+        await context.SaveChangesAsync();
+
+        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var dto = new CreateBookingDto(trip.Id, 1, "test@ref.com", "555-0003", null, new() { new("T", "User", "test@ref.com", "555-0003", "Single", "Regular") }, "PayLater", 0m);
+        var booking = await bookingService.CreateBookingAsync(org1, dto);
+
+        // Search with correct OrgId -> Should succeed
+        var matchingBooking = await bookingService.GetBookingByReferenceAsync(booking.BookingReference, org1);
+        Assert.NotNull(matchingBooking);
+
+        // Search with cross-tenant OrgId -> Should return null
+        var crossTenantBooking = await bookingService.GetBookingByReferenceAsync(booking.BookingReference, org2);
+        Assert.Null(crossTenantBooking);
+    }
+}
+
+public class TestController : TravelOrgOS.Api.Controllers.BaseApiController
+{
+    public Guid ExposedGetOrgId() => GetOrgId();
+}
+
+public class BaseApiControllerTests
+{
+    [Fact]
+    public void GetOrgId_WithValidClaim_ShouldReturnGuid()
+    {
+        var orgId = Guid.NewGuid();
+        var controller = new TestController();
+        var user = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(new[]
+        {
+            new System.Security.Claims.Claim("OrganizationId", orgId.ToString())
+        }, "TestAuth"));
+        
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = user }
+        };
+
+        Assert.Equal(orgId, controller.ExposedGetOrgId());
+    }
+
+    [Fact]
+    public void GetOrgId_WithMissingClaim_ShouldThrowUnauthorized()
+    {
+        var controller = new TestController();
+        var user = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(new System.Security.Claims.Claim[] { }, "TestAuth"));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = user }
+        };
+
+        Assert.Throws<UnauthorizedAccessException>(() => controller.ExposedGetOrgId());
     }
 }

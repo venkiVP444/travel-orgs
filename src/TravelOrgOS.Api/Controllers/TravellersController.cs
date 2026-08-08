@@ -7,20 +7,13 @@ namespace TravelOrgOS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TravellersController : ControllerBase
+public class TravellersController : BaseApiController
 {
     private readonly ITravellerService _travellerService;
 
     public TravellersController(ITravellerService travellerService)
     {
         _travellerService = travellerService;
-    }
-
-    private Guid GetOrgId()
-    {
-        var claim = User.FindFirst("OrganizationId")?.Value;
-        if (Guid.TryParse(claim, out var orgId)) return orgId;
-        return Guid.Parse("11111111-1111-1111-1111-111111111111"); // Fallback for Demo Org
     }
 
     [HttpGet]

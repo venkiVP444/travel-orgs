@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
@@ -9,7 +10,7 @@ namespace TravelOrgOS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class BookingsController : ControllerBase
+public class BookingsController : BaseApiController
 {
     private readonly IBookingService _bookingService;
     private readonly IConfiguration _configuration;
@@ -18,13 +19,6 @@ public class BookingsController : ControllerBase
     {
         _bookingService = bookingService;
         _configuration = configuration;
-    }
-
-    private Guid GetOrgId()
-    {
-        var claim = User.FindFirst("OrganizationId")?.Value;
-        if (Guid.TryParse(claim, out var orgId)) return orgId;
-        return Guid.Parse("11111111-1111-1111-1111-111111111111");
     }
 
     [HttpGet]
@@ -42,23 +36,27 @@ public class BookingsController : ControllerBase
         return Ok(booking);
     }
 
+    [AllowAnonymous]
     [HttpGet("ref/{reference}")]
     public async Task<IActionResult> GetBookingByReference(string reference)
     {
-        var booking = await _bookingService.GetBookingByReferenceAsync(reference);
+        Guid? authenticatedOrgId = null;
+        var claim = User.FindFirst("OrganizationId")?.Value;
+        if (Guid.TryParse(claim, out var orgId))
+        {
+            authenticatedOrgId = orgId;
+        }
+
+        var booking = await _bookingService.GetBookingByReferenceAsync(reference, authenticatedOrgId);
         if (booking == null) return NotFound();
         return Ok(booking);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id:guid}/payment-status")]
     public async Task<IActionResult> GetBookingPaymentStatus(Guid id)
     {
-        var booking = await _bookingService.GetBookingByReferenceAsync(id.ToString());
-        if (booking == null)
-        {
-            var allBookings = await _bookingService.GetBookingsAsync(GetOrgId());
-            booking = allBookings.FirstOrDefault(b => b.Id == id);
-        }
+        var booking = await _bookingService.GetBookingByIdForPortalAsync(id);
         if (booking == null) return NotFound();
 
         return Ok(new
@@ -88,6 +86,7 @@ public class BookingsController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpPost("portal/{orgSlug}")]
     public async Task<IActionResult> CreatePortalBooking(string orgSlug, [FromBody] CreateBookingDto dto)
     {
@@ -121,6 +120,7 @@ public class BookingsController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpPost("portal/{orgSlug}/{id:guid}/pay")]
     public async Task<IActionResult> InitiatePortalPayment(string orgSlug, Guid id, [FromBody] InitiatePaymentSessionDto dto)
     {
@@ -164,6 +164,7 @@ public class BookingsController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpPost("payment/verify-razorpay")]
     public async Task<IActionResult> VerifyRazorpayPayment([FromBody] RazorpayVerificationDto dto)
     {

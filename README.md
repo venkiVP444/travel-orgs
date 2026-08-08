@@ -2,6 +2,8 @@
 
 TravelOrgOS is a multi-tenant B2B SaaS platform for travel agencies, tour operators, group tour companies, and travel management organizations. It brings trips, itineraries, travellers, bookings, payments, and fleet operations into one platform while giving travellers a mobile-friendly booking experience branded under each organization's identity.
 
+For a comprehensive high-level guide to the system, see the [System Overview](file:///c:/personal/TravelOrgOS/docs/SYSTEM_OVERVIEW.md).
+
 ---
 
 ## CRITICAL DATABASE SAFETY GUARANTEE

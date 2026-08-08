@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelOrgOS.Api.DTOs;
 using TravelOrgOS.Domain.Enums;
@@ -7,20 +8,13 @@ namespace TravelOrgOS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TripsController : ControllerBase
+public class TripsController : BaseApiController
 {
     private readonly ITripService _tripService;
 
     public TripsController(ITripService tripService)
     {
         _tripService = tripService;
-    }
-
-    private Guid GetOrgId()
-    {
-        var claim = User.FindFirst("OrganizationId")?.Value;
-        if (Guid.TryParse(claim, out var orgId)) return orgId;
-        return Guid.Parse("11111111-1111-1111-1111-111111111111");
     }
 
     [HttpGet]
@@ -38,6 +32,7 @@ public class TripsController : ControllerBase
         return Ok(trip);
     }
 
+    [AllowAnonymous]
     [HttpGet("portal/{orgSlug}/{tripId:guid}")]
     public async Task<IActionResult> GetTripForPortal(string orgSlug, Guid tripId)
     {
@@ -46,6 +41,7 @@ public class TripsController : ControllerBase
         return Ok(trip);
     }
 
+    [AllowAnonymous]
     [HttpGet("portal/{orgSlug}")]
     public async Task<IActionResult> GetTripsForPortal(string orgSlug)
     {

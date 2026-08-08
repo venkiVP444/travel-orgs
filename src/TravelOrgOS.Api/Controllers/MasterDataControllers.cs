@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TravelOrgOS.Api.DTOs;
 using TravelOrgOS.Domain.Entities;
@@ -7,20 +8,13 @@ namespace TravelOrgOS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrganizationsController : ControllerBase
+public class OrganizationsController : BaseApiController
 {
     private readonly IMasterDataService _service;
 
     public OrganizationsController(IMasterDataService service)
     {
         _service = service;
-    }
-
-    private Guid GetOrgId()
-    {
-        var claim = User.FindFirst("OrganizationId")?.Value;
-        if (Guid.TryParse(claim, out var orgId)) return orgId;
-        return Guid.Parse("11111111-1111-1111-1111-111111111111");
     }
 
     [HttpGet("me")]
@@ -31,6 +25,7 @@ public class OrganizationsController : ControllerBase
         return Ok(org);
     }
 
+    [AllowAnonymous]
     [HttpGet("slug/{slug}")]
     public async Task<IActionResult> GetOrgBySlug(string slug)
     {
@@ -50,13 +45,11 @@ public class OrganizationsController : ControllerBase
 
 [ApiController]
 [Route("api/[controller]")]
-public class HotelsController : ControllerBase
+public class HotelsController : BaseApiController
 {
     private readonly IMasterDataService _service;
 
     public HotelsController(IMasterDataService service) => _service = service;
-
-    private Guid GetOrgId() => Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [HttpGet]
     public async Task<IActionResult> GetHotels() => Ok(await _service.GetHotelsAsync(GetOrgId()));
@@ -67,13 +60,11 @@ public class HotelsController : ControllerBase
 
 [ApiController]
 [Route("api/[controller]")]
-public class VehiclesController : ControllerBase
+public class VehiclesController : BaseApiController
 {
     private readonly IMasterDataService _service;
 
     public VehiclesController(IMasterDataService service) => _service = service;
-
-    private Guid GetOrgId() => Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [HttpGet]
     public async Task<IActionResult> GetVehicles() => Ok(await _service.GetVehiclesAsync(GetOrgId()));
@@ -84,13 +75,11 @@ public class VehiclesController : ControllerBase
 
 [ApiController]
 [Route("api/[controller]")]
-public class VendorsController : ControllerBase
+public class VendorsController : BaseApiController
 {
     private readonly IMasterDataService _service;
 
     public VendorsController(IMasterDataService service) => _service = service;
-
-    private Guid GetOrgId() => Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [HttpGet]
     public async Task<IActionResult> GetVendors() => Ok(await _service.GetVendorsAsync(GetOrgId()));
@@ -101,13 +90,11 @@ public class VendorsController : ControllerBase
 
 [ApiController]
 [Route("api/[controller]")]
-public class NotificationsController : ControllerBase
+public class NotificationsController : BaseApiController
 {
     private readonly IMasterDataService _service;
 
     public NotificationsController(IMasterDataService service) => _service = service;
-
-    private Guid GetOrgId() => Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [HttpGet]
     public async Task<IActionResult> GetNotifications() => Ok(await _service.GetNotificationsAsync(GetOrgId()));

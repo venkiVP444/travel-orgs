@@ -15,6 +15,8 @@ import { PortalBookingComponent } from './components/portal/portal-booking.compo
 import { PortalBookingSuccessComponent } from './components/portal/portal-booking-success.component';
 import { PortalPaymentReturnComponent } from './components/portal/portal-payment-return.component';
 
+import { authGuard } from './guards/auth.guard';
+
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
 
@@ -30,6 +32,7 @@ export const routes: Routes = [
   {
     path: '',
     component: AdminLayoutComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },

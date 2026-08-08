@@ -5,20 +5,13 @@ namespace TravelOrgOS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ReportsController : ControllerBase
+public class ReportsController : BaseApiController
 {
     private readonly IReportService _reportService;
 
     public ReportsController(IReportService reportService)
     {
         _reportService = reportService;
-    }
-
-    private Guid GetOrgId()
-    {
-        var claim = User.FindFirst("OrganizationId")?.Value;
-        if (Guid.TryParse(claim, out var orgId)) return orgId;
-        return Guid.Parse("11111111-1111-1111-1111-111111111111");
     }
 
     [HttpGet("bookings/export")]

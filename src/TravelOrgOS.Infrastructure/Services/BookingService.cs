@@ -11,13 +11,14 @@ public interface IBookingService
 {
     Task<List<BookingDto>> GetBookingsAsync(Guid orgId, string? search = null);
     Task<BookingDto?> GetBookingByIdAsync(Guid orgId, Guid id);
-    Task<BookingDto?> GetBookingByReferenceAsync(string reference);
+    Task<BookingDto?> GetBookingByReferenceAsync(string reference, Guid? orgId = null);
     Task<BookingDto> CreateBookingAsync(Guid orgId, CreateBookingDto dto, Guid? userId = null);
     Task<bool> ConfirmBookingAsync(Guid orgId, Guid bookingId);
     Task<bool> CancelBookingAsync(Guid orgId, Guid bookingId);
     Task<BookingDto?> RecordPaymentAsync(Guid orgId, Guid bookingId, RecordPaymentDto dto);
     Task<PaymentCheckoutSessionDto> InitiatePaymentSessionAsync(Guid orgId, InitiatePaymentSessionDto dto);
     Task<bool> ProcessGatewayPaymentWebhookAsync(PaymentWebhookEvent webhookEvent);
+    Task<BookingDto?> GetBookingByIdForPortalAsync(Guid id);
 }
 
 public class BookingService : IBookingService
@@ -63,13 +64,20 @@ public class BookingService : IBookingService
         return booking == null ? null : MapToDto(booking);
     }
 
-    public async Task<BookingDto?> GetBookingByReferenceAsync(string reference)
+    public async Task<BookingDto?> GetBookingByReferenceAsync(string reference, Guid? orgId = null)
     {
-        var booking = await _context.Bookings
+        var query = _context.Bookings
             .Include(b => b.Trip)
             .Include(b => b.BookingTravellers).ThenInclude(bt => bt.Traveller)
             .Include(b => b.Payments)
-            .FirstOrDefaultAsync(b => b.BookingReference.ToLower() == reference.ToLower());
+            .AsQueryable();
+
+        if (orgId.HasValue)
+        {
+            query = query.Where(b => b.OrganizationId == orgId.Value);
+        }
+
+        var booking = await query.FirstOrDefaultAsync(b => b.BookingReference.ToLower() == reference.ToLower());
 
         return booking == null ? null : MapToDto(booking);
     }
@@ -470,6 +478,17 @@ public class BookingService : IBookingService
 
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<BookingDto?> GetBookingByIdForPortalAsync(Guid id)
+    {
+        var booking = await _context.Bookings
+            .Include(b => b.Trip)
+            .Include(b => b.BookingTravellers).ThenInclude(bt => bt.Traveller)
+            .Include(b => b.Payments)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        return booking == null ? null : MapToDto(booking);
     }
 
     private static BookingDto MapToDto(Booking b) => new(
