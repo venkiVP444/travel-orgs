@@ -1,29 +1,45 @@
-# UX Design Agent
+﻿# UX Design Agent
 
 ## 1. Purpose
-Governs layout consistency, loading state indications, responsive displays, and user notification messages.
+Governs interface component styles, responsive layout rules, form validator indicators, and loading skeletons.
 
 ## 2. Domain Responsibility
-- Tracks stylesheet files, reusable layout elements, dialog displays, and form structures.
+- Handles stylesheets, design systems alignment, empty states components, buttons indicators, and responsive flows.
 
-## 3. Files to Inspect Before Modifying
+## 3. Current Repository Reality
+- Tailwind CSS styles exist.
+- Lacks skeleton loaders for batch CSV imports and multi-step configurations. Forms use generic modals instead of slide drawers.
+
+## 4. Files to Inspect Before Modifying
 - [styles.scss](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Web/src/styles.scss)
-- [index.html](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Web/src/index.html)
+- [app.component.ts](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Web/src/app/app.component.ts)
 
-## 4. Database Rules
-- None (UI layer focused).
+## 5. Database Rules
+- None (UI presentation focus).
 
-## 5. API Rules
-- Handle HTTP status code responses gracefully (e.g., 401, 403, 500).
+## 6. API Rules
+- Display readable error messages matching specific HTTP codes.
 
-## 6. UI Rules
-- Enforce consistent grid alignments, responsive columns, and loader components.
+## 7. Frontend Rules
+- Interfaces must be mobile-responsive and include loading states for high-latency actions.
 
-## 7. Validation Rules
-- Enforce form field validation indicators before submission.
+## 8. Security Rules
+- Render active view items matching user permissions.
 
-## 8. Security & Isolation
-- Ensure client-side route guards block unauthorized page access.
+## 9. Integration Dependencies
+- Applies to all Angular views.
 
-## 9. Definition of Done
-- Pages render without console errors, and interfaces scale smoothly on mobile resolutions.
+## 10. India-Specific Considerations
+- Support Indian Rupee formatting (â‚¹) and localized date layouts (DD-MM-YYYY).
+
+## 11. Testing Requirements
+- Verify styles and grids align cleanly across standard screen sizes.
+
+## 12. Production-Readiness Requirements
+- Minimize CSS size and optimize image assets load.
+
+## 13. Anti-Patterns
+- Using static cards, unlinked buttons, or displaying raw error codes on forms.
+
+## 14. Definition of Done
+- Interactivity verified, loaders functional, and layouts responsive.

@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using TravelOrgOS.Infrastructure.Data;
 using TravelOrgOS.Infrastructure.Services;
 using TravelOrgOS.Infrastructure.Services.PaymentGateways;
+using TravelOrgOS.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,12 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IMasterDataService, MasterDataService>();
+builder.Services.AddScoped<ITaxService, TaxService>();
+builder.Services.AddScoped<IGuideService, GuideService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<IMarketingService, MarketingService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 
 // Payment Gateway Services
 builder.Services.AddScoped<IPaymentGatewayService, TravelOrgOS.Infrastructure.Services.PaymentGateways.MockPaymentGatewayService>();
@@ -91,6 +98,7 @@ using (var scope = app.Services.CreateScope())
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<EntitlementMiddleware>();
 app.MapControllers();
 
 app.Run();

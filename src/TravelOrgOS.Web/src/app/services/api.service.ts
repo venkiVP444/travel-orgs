@@ -227,4 +227,92 @@ export class ApiService {
   resetDemoData(): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/demo/reset`, {}, { headers: this.getAuthHeaders() });
   }
+
+  // GUIDES
+  getGuides(search?: string): Observable<any[]> {
+    const url = search ? `${this.baseUrl}/guides?search=${encodeURIComponent(search)}` : `${this.baseUrl}/guides`;
+    return this.http.get<any[]>(url, { headers: this.getAuthHeaders() });
+  }
+
+  getGuide(id: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/guides/${id}`, { headers: this.getAuthHeaders() });
+  }
+
+  createGuide(guide: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/guides`, guide, { headers: this.getAuthHeaders() });
+  }
+
+  updateGuide(id: string, guide: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/guides/${id}`, guide, { headers: this.getAuthHeaders() });
+  }
+
+  toggleGuideStatus(id: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/guides/${id}/toggle-status`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  checkGuideAvailability(id: string, start: string, end: string, currentTripId?: string): Observable<boolean> {
+    let url = `${this.baseUrl}/guides/${id}/availability?start=${start}&end=${end}`;
+    if (currentTripId) url += `&currentTripId=${currentTripId}`;
+    return this.http.get<boolean>(url, { headers: this.getAuthHeaders() });
+  }
+
+  saveTripGuides(tripId: string, guides: any[]): Observable<any[]> {
+    return this.http.post<any[]>(`${this.baseUrl}/trips/${tripId}/guides`, guides, { headers: this.getAuthHeaders() });
+  }
+
+  // TEAM
+  getTeamMembers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/team`, { headers: this.getAuthHeaders() });
+  }
+
+  inviteTeamMember(invite: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/team/invite`, invite, { headers: this.getAuthHeaders() });
+  }
+
+  acceptInvitation(accept: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/team/accept`, accept);
+  }
+
+  toggleTeamMemberStatus(id: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/team/${id}/toggle-status`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  changeTeamMemberRole(id: string, role: number): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/team/${id}/role`, role, { headers: this.getAuthHeaders() });
+  }
+
+  // MARKETING
+  getCampaigns(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/marketing`, { headers: this.getAuthHeaders() });
+  }
+
+  createCampaign(campaign: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/marketing`, campaign, { headers: this.getAuthHeaders() });
+  }
+
+  sendCampaign(id: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/marketing/${id}/send`, {}, { headers: this.getAuthHeaders() });
+  }
+
+  // SUBSCRIPTIONS
+  getQuota(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/subscriptions/quota`, { headers: this.getAuthHeaders() });
+  }
+
+  initializeQuota(tier: number): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/subscriptions/initialize`, tier, { headers: this.getAuthHeaders() });
+  }
+
+  // CHAT MESSAGE THREADS
+  getChatMessages(tripId?: string, bookingId?: string): Observable<any[]> {
+    let url = `${this.baseUrl}/chat`;
+    if (tripId) url += `?tripId=${tripId}`;
+    if (bookingId) url += `?bookingId=${bookingId}`;
+    return this.http.get<any[]>(url, { headers: this.getAuthHeaders() });
+  }
+
+  createChatMessage(msg: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/chat`, msg, { headers: this.getAuthHeaders() });
+  }
 }
+

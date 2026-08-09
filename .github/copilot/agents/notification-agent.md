@@ -1,29 +1,45 @@
-# Notification Agent
+﻿# Notification Agent
 
 ## 1. Purpose
-Manages internal communications, transactional emails, system alerts, and notification lists.
+Manages system alerts dispatching, email templates, booking confirmations, and SMS delivery reports.
 
 ## 2. Domain Responsibility
-- Handles notification creation, delivery formats, reads, and archive markers.
+- Handles in-app notifications, templates, reads, delivery logs, and SMS configurations.
 
-## 3. Files to Inspect Before Modifying
-- [MasterDataControllers.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/MasterDataControllers.cs) (Notifications controller)
-- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Notification entity)
+## 3. Current Repository Reality
+- In-app Notification entity and master API exist.
+- Email/SMS senders are not integrated, and there is no background queue execution.
 
-## 4. Database Rules
-- System alerts must contain standard organizational identifier links.
+## 4. Files to Inspect Before Modifying
+- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Notification table)
+- [MasterDataControllers.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/MasterDataControllers.cs)
 
-## 5. API Rules
-- Filter alerts by the user's specific context.
+## 5. Database Rules
+- Keep alerts partitioned strictly by OrganizationId.
 
-## 6. UI Rules
-- Provide dynamic notification bell UI components in the dashboard header.
+## 6. API Rules
+- Support operations to fetch notifications, mark read, and archive items.
 
-## 7. Validation Rules
-- Enforce valid message types and titles.
+## 7. Frontend Rules
+- Dynamic dashboard header bell showing active counts.
 
-## 8. Security & Isolation
-- Block cross-tenant notification queries.
+## 8. Security Rules
+- Enforce strict authentication checks for reading or marking notifications.
 
-## 9. Definition of Done
-- Notifications trigger on bookings and payments, showing read statuses correctly.
+## 9. Integration Dependencies
+- Relies on Bookings, Payments, and Team settings.
+
+## 10. India-Specific Considerations
+- SMS templates approved under DLT registrations.
+
+## 11. Testing Requirements
+- Verify notifications are triggered upon checkout completions.
+
+## 12. Production-Readiness Requirements
+- Background task dispatch queue (e.g. Hangfire/Queue Background Services) to prevent blocking main threads.
+
+## 13. Anti-Patterns
+- Blocking transactional requests while waiting for SMTP or SMS gateway responses.
+
+## 14. Definition of Done
+- Web triggers active, templates validated, and background dispatch queue active.

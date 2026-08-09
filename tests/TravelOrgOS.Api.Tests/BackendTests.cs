@@ -88,7 +88,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
 
         var dto = new CreateBookingDto(
             TripId: trip.Id,
@@ -132,7 +132,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
 
         var dto = new CreateBookingDto(
             TripId: trip.Id,
@@ -170,7 +170,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
         var dto = new CreateBookingDto(trip.Id, 1, "test@math.com", "555-0001", null, new() { new("M", "User", "test@math.com", "555-0001", "Single", "Regular") }, "Full", 1000m);
         
         var res = await bookingService.CreateBookingAsync(orgId, dto);
@@ -190,7 +190,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
         var dto = new CreateBookingDto(trip.Id, 1, "dep@math.com", "555-0002", null, new() { new("D", "User", "dep@math.com", "555-0002", "Single", "Regular") }, "Deposit", 300m);
         
         var res = await bookingService.CreateBookingAsync(orgId, dto);
@@ -212,7 +212,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
         var dto = new CreateBookingDto(trip.Id, 1, "tenant@test.com", "555-0003", null, new() { new("T", "User", "tenant@test.com", "555-0003", "Single", "Regular") }, "PayLater", 0m);
         var booking = await bookingService.CreateBookingAsync(org1, dto);
 
@@ -233,7 +233,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
         var dto = new CreateBookingDto(trip.Id, 1, "idem@test.com", "555-0004", null, new() { new("I", "User", "idem@test.com", "555-0004", "Single", "Regular") }, "PayLater", 0m);
         var booking = await bookingService.CreateBookingAsync(orgId, dto);
 
@@ -281,7 +281,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
         var dto = new CreateBookingDto(trip.Id, 1, "fail@test.com", "555-0005", null, new() { new("F", "User", "fail@test.com", "555-0005", "Single", "Regular") }, "PayLater", 0m);
         var booking = await bookingService.CreateBookingAsync(orgId, dto);
 
@@ -338,7 +338,7 @@ public class BookingServiceTests
         context.Trips.Add(trip);
         await context.SaveChangesAsync();
 
-        var bookingService = new BookingService(context, GetMockGatewayFactory());
+        var bookingService = new BookingService(context, GetMockGatewayFactory(), new TaxService());
         var dto = new CreateBookingDto(trip.Id, 1, "test@ref.com", "555-0003", null, new() { new("T", "User", "test@ref.com", "555-0003", "Single", "Regular") }, "PayLater", 0m);
         var booking = await bookingService.CreateBookingAsync(org1, dto);
 
@@ -390,3 +390,102 @@ public class BaseApiControllerTests
         Assert.Throws<UnauthorizedAccessException>(() => controller.ExposedGetOrgId());
     }
 }
+
+public class ProductionCompletionTests
+{
+    private TravelOrgOSDbContext GetInMemoryDbContext()
+    {
+        var options = new DbContextOptionsBuilder<TravelOrgOSDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        return new TravelOrgOSDbContext(options);
+    }
+
+    [Fact]
+    public void TaxService_IntrastateGST_ShouldSplitCGSTAndSGST()
+    {
+        var taxService = new TaxService();
+        var result = taxService.CalculateGst(1000m, "Karnataka", "Karnataka");
+
+        Assert.Equal(180m, result.TotalTax);
+        Assert.Equal(90m, result.CGST);
+        Assert.Equal(90m, result.SGST);
+        Assert.Equal(0m, result.IGST);
+        Assert.Equal(1180m, result.GrandTotal);
+    }
+
+    [Fact]
+    public void TaxService_InterstateGST_ShouldChargeIGST()
+    {
+        var taxService = new TaxService();
+        var result = taxService.CalculateGst(1000m, "Karnataka", "Tamil Nadu");
+
+        Assert.Equal(180m, result.TotalTax);
+        Assert.Equal(0m, result.CGST);
+        Assert.Equal(0m, result.SGST);
+        Assert.Equal(180m, result.IGST);
+        Assert.Equal(1180m, result.GrandTotal);
+    }
+
+    [Fact]
+    public async Task GuideService_InactiveGuide_ShouldRejectAvailability()
+    {
+        using var context = GetInMemoryDbContext();
+        var orgId = Guid.NewGuid();
+        var guide = new Guide { Id = Guid.NewGuid(), OrganizationId = orgId, Name = "Inactive Guide", Email = "in@test.com", Phone = "999", Status = false };
+        context.Guides.Add(guide);
+        await context.SaveChangesAsync();
+
+        var service = new GuideService(context);
+        var isAvailable = await service.CheckGuideAvailabilityAsync(orgId, guide.Id, DateTime.UtcNow, DateTime.UtcNow.AddDays(1));
+        Assert.False(isAvailable);
+    }
+
+    [Fact]
+    public async Task GuideService_OverlapSchedule_ShouldRejectAvailability()
+    {
+        using var context = GetInMemoryDbContext();
+        var orgId = Guid.NewGuid();
+        
+        var guide = new Guide { Id = Guid.NewGuid(), OrganizationId = orgId, Name = "Lead Guide", Email = "lead@test.com", Phone = "123", Status = true };
+        var trip1 = new Trip { Id = Guid.NewGuid(), OrganizationId = orgId, TripCode = "TRP1", TripName = "Trip One", StartDate = DateTime.UtcNow.AddDays(1), EndDate = DateTime.UtcNow.AddDays(5), Status = TripStatus.RegistrationOpen };
+        var tripGuide = new TripGuide { Id = Guid.NewGuid(), TripId = trip1.Id, GuideId = guide.Id };
+
+        context.Guides.Add(guide);
+        context.Trips.Add(trip1);
+        context.TripGuides.Add(tripGuide);
+        await context.SaveChangesAsync();
+
+        var service = new GuideService(context);
+        
+        // Exact matching overlap
+        var available = await service.CheckGuideAvailabilityAsync(orgId, guide.Id, DateTime.UtcNow.AddDays(2), DateTime.UtcNow.AddDays(4));
+        Assert.False(available);
+
+        // Outside timeframe
+        var availableOutside = await service.CheckGuideAvailabilityAsync(orgId, guide.Id, DateTime.UtcNow.AddDays(6), DateTime.UtcNow.AddDays(10));
+        Assert.True(availableOutside);
+    }
+
+    [Fact]
+    public async Task SubscriptionService_TripsQuotaLimits_ShouldAssertLimits()
+    {
+        using var context = GetInMemoryDbContext();
+        var orgId = Guid.NewGuid();
+
+        var service = new SubscriptionService(context);
+        await service.InitializeQuotaAsync(orgId, SubscriptionTier.Starter); // max 3 active trips
+
+        var t1 = new Trip { Id = Guid.NewGuid(), OrganizationId = orgId, TripCode = "A1", TripName = "A", Status = TripStatus.RegistrationOpen };
+        var t2 = new Trip { Id = Guid.NewGuid(), OrganizationId = orgId, TripCode = "A2", TripName = "B", Status = TripStatus.RegistrationOpen };
+        var t3 = new Trip { Id = Guid.NewGuid(), OrganizationId = orgId, TripCode = "A3", TripName = "C", Status = TripStatus.RegistrationOpen };
+
+        context.Trips.AddRange(t1, t2, t3);
+        await context.SaveChangesAsync();
+
+        // 3 active trips exist, so creating a 4th active trip should be rejected
+        var allowed = await service.CanCreateTripAsync(orgId);
+        Assert.False(allowed);
+    }
+}
+

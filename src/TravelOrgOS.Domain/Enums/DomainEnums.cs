@@ -94,3 +94,35 @@ public enum NotificationType
     TripCancelled = 7,
     TripReminder = 8
 }
+
+public enum CampaignStatus
+{
+    Draft = 1,
+    Scheduled = 2,
+    Sending = 3,
+    Sent = 4,
+    Cancelled = 5,
+    Failed = 6
+}
+
+public enum CampaignType
+{
+    Email = 1,
+    SMS = 2,
+    WhatsApp = 3
+}
+
+public enum SubscriptionTier
+{
+    Starter = 1,
+    Growth = 2,
+    Business = 3,
+    Enterprise = 4
+}
+
+public enum MessageType
+{
+    Text = 1,
+    System = 2
+}
+

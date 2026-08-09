@@ -1,29 +1,45 @@
-# QA & E2E Agent
+﻿# QA & E2E Agent
 
 ## 1. Purpose
-Governs unit testing suites, mock setup classes, and end-to-end user-journey coverage assertions.
+Governs integration test setups, unit tests assertions, and automated end-to-end user-journey testing.
 
 ## 2. Domain Responsibility
-- Manages test code, assertions, coverage metrics, and pipeline runs.
+- Handles backend unit/integration testing suite, E2E journey scripts, and validation coverage checks.
 
-## 3. Files to Inspect Before Modifying
+## 3. Current Repository Reality
+- Backend xUnit tests for database safety checker and booking calculations exist.
+- Lacks automated E2E testing framework setups and coverage for customer journeys.
+
+## 4. Files to Inspect Before Modifying
 - [BackendTests.cs](file:///c:/personal/TravelOrgOS/tests/TravelOrgOS.Api.Tests/BackendTests.cs)
 - [TravelOrgOS.Api.Tests.csproj](file:///c:/personal/TravelOrgOS/tests/TravelOrgOS.Api.Tests/TravelOrgOS.Api.Tests.csproj)
 
-## 4. Database Rules
-- Keep test runs isolated (e.g., using in-memory databases or fresh transaction steps).
+## 5. Database Rules
+- Keep test executions isolated (using memory DB or setup transaction rollbacks).
 
-## 5. API Rules
-- Assert correct HTTP responses and payload structures.
+## 6. API Rules
+- Assert correct status codes, data payloads, and error messaging formats.
 
-## 6. UI Rules
-- Ensure E2E scripts cover user-critical workflows (e.g., checkout and booking).
+## 7. Frontend Rules
+- Verify E2E flows map accurately to user steps.
 
-## 7. Validation Rules
-- Test both success and failure boundaries.
+## 8. Security Rules
+- Include validation cases verifying data leakage is blocked between tenants.
 
-## 8. Security & Isolation
-- Write explicit tests to verify that tenant data is never leaked.
+## 9. Integration Dependencies
+- Validates all other system modules.
 
-## 9. Definition of Done
-- All test suites run successfully without failures.
+## 10. India-Specific Considerations
+- Test GST calculation variations and Razorpay transaction logic.
+
+## 11. Testing Requirements
+- Code coverage validations.
+
+## 12. Production-Readiness Requirements
+- Integrate testing steps into local deployment validation scripts.
+
+## 13. Anti-Patterns
+- Asserting success using HTTP 200 without checking actual database values updates.
+
+## 14. Definition of Done
+- Test suites execution passes, coverage limits met, and E2E paths defined.

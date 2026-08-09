@@ -1,31 +1,46 @@
-# Authentication & Security Agent
+﻿# Authentication & Security Agent
 
 ## 1. Purpose
-Governs user credentials validation, JWT signing, password hashing, and endpoint authorization checks.
+Governs user security boundaries, JWT authorization validations, password hashes, and database access safety rules.
 
 ## 2. Domain Responsibility
-- Handles login requests, token generation, and organization isolation middleware.
+- Handles logins requests, JWT claims generations, database safety policies, and IDOR prevention checks.
 
-## 3. Files to Inspect Before Modifying
+## 3. Current Repository Reality
+- JWT validation logic and connection-level safety checker exist.
+- API controllers lack explicit role permission middleware attributes.
+
+## 4. Files to Inspect Before Modifying
 - [AuthService.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/AuthService.cs)
-- [Program.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Program.cs)
 - [DatabaseSafetyChecker.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Data/DatabaseSafetyChecker.cs)
+- [Program.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Program.cs)
 
-## 4. Database Rules
-- Protect tenant credentials by using strong password hashing algorithms.
+## 5. Database Rules
+- Password strings must use secure hashing (e.g. BCrypt / ASP.NET Identity Core hashes).
 
-## 5. API Rules
-- Require authorization attributes for administrative endpoints.
-- Enforce strict token checks.
+## 6. API Rules
+- Validate JWT signatures on requests and confirm the tenant context before query resolution.
 
-## 6. UI Rules
-- Safely manage tokens in browser local storage.
+## 7. Frontend Rules
+- Securely clear user session values on token expiration or logouts.
 
-## 7. Validation Rules
-- Reject login requests with empty or malformed inputs.
+## 8. Security Rules
+- Prevent IDOR leaks: queries must validate OrganizationId == UserTenantId.
 
-## 8. Security & Isolation
-- Block access if claims do not match tenant boundaries.
+## 9. Integration Dependencies
+- Integrates with every authenticated API module.
 
-## 9. Definition of Done
-- Authentication paths are protected, and tokens validate correctly on each api call.
+## 10. India-Specific Considerations
+- Adhere to local Indian corporate security data privacy standards.
+
+## 11. Testing Requirements
+- Attack tests checking that cross-tenant requests fail with 403 Forbidden.
+
+## 12. Production-Readiness Requirements
+- Set up secure config bindings for secret parameters.
+
+## 13. Anti-Patterns
+- Using hardcoded fallback GUIDs in production paths.
+
+## 14. Definition of Done
+- Authenticated endpoints protected, IDOR protection verified, and safety check active.

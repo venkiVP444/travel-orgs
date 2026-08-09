@@ -197,6 +197,7 @@ export interface Trip {
   vehicles: TripVehicle[];
   vendors: TripVendor[];
   meals: TripMeal[];
+  guides?: any[];
 }
 
 export interface BookingTraveller {

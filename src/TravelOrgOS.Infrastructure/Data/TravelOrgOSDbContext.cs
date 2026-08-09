@@ -26,6 +26,12 @@ public class TravelOrgOSDbContext : DbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Guide> Guides => Set<Guide>();
+    public DbSet<TripGuide> TripGuides => Set<TripGuide>();
+    public DbSet<Campaign> Campaigns => Set<Campaign>();
+    public DbSet<CampaignRecipient> CampaignRecipients => Set<CampaignRecipient>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<SubscriptionQuota> SubscriptionQuotas => Set<SubscriptionQuota>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,5 +102,73 @@ public class TravelOrgOSDbContext : DbContext
 
         modelBuilder.Entity<Payment>()
             .HasIndex(p => p.ProviderEventId);
+
+        // Guide Constraints & Relations
+        modelBuilder.Entity<Guide>()
+            .HasIndex(g => new { g.OrganizationId, g.Email })
+            .IsUnique();
+
+        modelBuilder.Entity<Guide>()
+            .HasOne(g => g.Organization)
+            .WithMany(o => o.Guides)
+            .HasForeignKey(g => g.OrganizationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TripGuide>()
+            .HasOne(tg => tg.Trip)
+            .WithMany(t => t.TripGuides)
+            .HasForeignKey(tg => tg.TripId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TripGuide>()
+            .HasOne(tg => tg.Guide)
+            .WithMany(g => g.TripGuides)
+            .HasForeignKey(tg => tg.GuideId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Campaign Relations
+        modelBuilder.Entity<Campaign>()
+            .HasOne(c => c.Organization)
+            .WithMany(o => o.Campaigns)
+            .HasForeignKey(c => c.OrganizationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CampaignRecipient>()
+            .HasOne(cr => cr.Campaign)
+            .WithMany(c => c.Recipients)
+            .HasForeignKey(cr => cr.CampaignId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CampaignRecipient>()
+            .HasOne(cr => cr.Traveller)
+            .WithMany()
+            .HasForeignKey(cr => cr.TravellerId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Chat Relations
+        modelBuilder.Entity<ChatMessage>()
+            .HasOne(cm => cm.Organization)
+            .WithMany()
+            .HasForeignKey(cm => cm.OrganizationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ChatMessage>()
+            .HasOne(cm => cm.Trip)
+            .WithMany(t => t.ChatMessages)
+            .HasForeignKey(cm => cm.TripId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChatMessage>()
+            .HasOne(cm => cm.Booking)
+            .WithMany()
+            .HasForeignKey(cm => cm.BookingId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Subscription Relations
+        modelBuilder.Entity<SubscriptionQuota>()
+            .HasOne(sq => sq.Organization)
+            .WithOne()
+            .HasForeignKey<SubscriptionQuota>(sq => sq.OrganizationId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

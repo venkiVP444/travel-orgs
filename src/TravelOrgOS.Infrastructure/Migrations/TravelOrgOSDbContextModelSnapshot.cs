@@ -84,6 +84,9 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.Property<int>("BookingStatus")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("CGST")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("ContactEmail")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -97,6 +100,12 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("GstPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("IGST")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("NumberOfTravellers")
                         .HasColumnType("int");
 
@@ -109,10 +118,19 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.Property<int>("PaymentStatus")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("SGST")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("SpecialRequests")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("TaxableAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalTax")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("TripId")
@@ -162,6 +180,195 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.HasIndex("TravellerId");
 
                     b.ToTable("BookingTravellers");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.Campaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BodyTemplate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ScheduledFor")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TargetSegmentQuery")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Campaigns");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.CampaignRecipient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ActionAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("TravellerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("TravellerId");
+
+                    b.ToTable("CampaignRecipients");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("BookingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("MessageType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SenderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("TripId");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.Guide", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ExperienceYears")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Languages")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LicenseNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Specializations")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("Status")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Email")
+                        .IsUnique();
+
+                    b.ToTable("Guides");
                 });
 
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.Hotel", b =>
@@ -287,6 +494,10 @@ namespace TravelOrgOS.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("GSTIN")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
                     b.Property<string>("InstagramUrl")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -325,6 +536,10 @@ namespace TravelOrgOS.Infrastructure.Migrations
 
                     b.Property<string>("Slug")
                         .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("State")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -471,6 +686,47 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.HasIndex("TransactionReference");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.SubscriptionQuota", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxActiveTrips")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxBookingsPerMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxTeamMembers")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Status")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("SubscriptionQuotas");
                 });
 
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.Traveller", b =>
@@ -686,6 +942,30 @@ namespace TravelOrgOS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Trips");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.TripGuide", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("GuideId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GuideId");
+
+                    b.HasIndex("TripId");
+
+                    b.ToTable("TripGuides");
                 });
 
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.TripHotel", b =>
@@ -995,6 +1275,72 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.Navigation("Traveller");
                 });
 
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.Campaign", b =>
+                {
+                    b.HasOne("TravelOrgOS.Domain.Entities.Organization", "Organization")
+                        .WithMany("Campaigns")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.CampaignRecipient", b =>
+                {
+                    b.HasOne("TravelOrgOS.Domain.Entities.Campaign", "Campaign")
+                        .WithMany("Recipients")
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TravelOrgOS.Domain.Entities.Traveller", "Traveller")
+                        .WithMany()
+                        .HasForeignKey("TravellerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("Traveller");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("TravelOrgOS.Domain.Entities.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("TravelOrgOS.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TravelOrgOS.Domain.Entities.Trip", "Trip")
+                        .WithMany("ChatMessages")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.Guide", b =>
+                {
+                    b.HasOne("TravelOrgOS.Domain.Entities.Organization", "Organization")
+                        .WithMany("Guides")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.Hotel", b =>
                 {
                     b.HasOne("TravelOrgOS.Domain.Entities.Organization", "Organization")
@@ -1027,6 +1373,17 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.Navigation("Booking");
                 });
 
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.SubscriptionQuota", b =>
+                {
+                    b.HasOne("TravelOrgOS.Domain.Entities.Organization", "Organization")
+                        .WithOne()
+                        .HasForeignKey("TravelOrgOS.Domain.Entities.SubscriptionQuota", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.Traveller", b =>
                 {
                     b.HasOne("TravelOrgOS.Domain.Entities.Organization", "Organization")
@@ -1047,6 +1404,25 @@ namespace TravelOrgOS.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.TripGuide", b =>
+                {
+                    b.HasOne("TravelOrgOS.Domain.Entities.Guide", "Guide")
+                        .WithMany("TripGuides")
+                        .HasForeignKey("GuideId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TravelOrgOS.Domain.Entities.Trip", "Trip")
+                        .WithMany("TripGuides")
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Guide");
+
+                    b.Navigation("Trip");
                 });
 
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.TripHotel", b =>
@@ -1157,8 +1533,22 @@ namespace TravelOrgOS.Infrastructure.Migrations
                     b.Navigation("Payments");
                 });
 
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.Campaign", b =>
+                {
+                    b.Navigation("Recipients");
+                });
+
+            modelBuilder.Entity("TravelOrgOS.Domain.Entities.Guide", b =>
+                {
+                    b.Navigation("TripGuides");
+                });
+
             modelBuilder.Entity("TravelOrgOS.Domain.Entities.Organization", b =>
                 {
+                    b.Navigation("Campaigns");
+
+                    b.Navigation("Guides");
+
                     b.Navigation("Hotels");
 
                     b.Navigation("Travellers");
@@ -1181,7 +1571,11 @@ namespace TravelOrgOS.Infrastructure.Migrations
                 {
                     b.Navigation("Bookings");
 
+                    b.Navigation("ChatMessages");
+
                     b.Navigation("ItineraryDays");
+
+                    b.Navigation("TripGuides");
 
                     b.Navigation("TripHotels");
 

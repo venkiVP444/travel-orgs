@@ -1,31 +1,46 @@
-# Team Management Agent
+﻿# Team Management Agent
 
 ## 1. Purpose
-Manages internal users, role scopes, invite states, permissions, and audit tracking.
+Governs organization users administration, inviter layouts, roles configuration, security tokens, and permission limits.
 
 ## 2. Domain Responsibility
-- Handles organization users, role assignments (Owner, Admin, Finance, Coordinator, etc.), and activity checks.
+- Handles user lists, role scopes (Owner, Admin, Finance, Coordinator, etc.), invitations, activation states, and security logs.
 
-## 3. Files to Inspect Before Modifying
+## 3. Current Repository Reality
+- Basic user logins and seed credentials exist.
+- Lacks a UI for team list management, invite invitation flows, and roles editor. Endpoints do not enforce permission attribute checks.
+
+## 4. Files to Inspect Before Modifying
 - [AuthService.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/AuthService.cs)
-- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (OrganizationUser entity)
+- [PermissionAttribute.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Authorization/PermissionAttribute.cs)
+- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (OrganizationUser)
 
-## 4. Database Rules
-- Emails must be unique across all system users.
+## 5. Database Rules
+- User email strings must be unique across the entire database.
 
-## 5. API Rules
-- Validate role scopes on request execution.
-- Only organization Owners or Admins can modify member roles.
+## 6. API Rules
+- Secure all administrative endpoints using the custom [RequiresPermission("Capability")] attribute.
 
-## 6. UI Rules
-- Provide clear layout grids listing current users, roles, statuses, and login audit times.
+## 7. Frontend Rules
+- Create a Team settings dashboard displaying member tables, roles, and status controls.
 
-## 7. Validation Rules
-- Password hashes and strong password criteria checks must match standards.
+## 8. Security Rules
+- Only Owners and Admins can modify other member roles or trigger invitations.
 
-## 8. Security & Isolation
-- Scope member lists strictly to the authenticated tenant.
+## 9. Integration Dependencies
+- Relies on Authentication and Security.
 
-## 9. Definition of Done
-- Admins can invite or de-activate members.
-- Role changes take effect immediately on next authentication token.
+## 10. India-Specific Considerations
+- Support SMS invite alerts matching DND and TRAI communication rules.
+
+## 11. Testing Requirements
+- Verify that a user assigned a restricted role (e.g., FinanceUser) receives a 403 Forbidden when trying to access admin configurations.
+
+## 12. Production-Readiness Requirements
+- Trace profile audits for role modifications.
+
+## 13. Anti-Patterns
+- Storing password hashes in plain text or relying solely on client-side UI buttons hidden states to enforce permissions.
+
+## 14. Definition of Done
+- All API endpoints guarded, team CRUD active, and role validations verified.

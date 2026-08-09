@@ -25,11 +25,13 @@ public class BookingService : IBookingService
 {
     private readonly TravelOrgOSDbContext _context;
     private readonly IPaymentGatewayFactory _gatewayFactory;
+    private readonly ITaxService _taxService;
 
-    public BookingService(TravelOrgOSDbContext context, IPaymentGatewayFactory gatewayFactory)
+    public BookingService(TravelOrgOSDbContext context, IPaymentGatewayFactory gatewayFactory, ITaxService taxService)
     {
         _context = context;
         _gatewayFactory = gatewayFactory;
+        _taxService = taxService;
     }
 
     public async Task<List<BookingDto>> GetBookingsAsync(Guid orgId, string? search = null)
@@ -84,152 +86,205 @@ public class BookingService : IBookingService
 
     public async Task<BookingDto> CreateBookingAsync(Guid orgId, CreateBookingDto dto, Guid? userId = null)
     {
-        var trip = await _context.Trips.FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Id == dto.TripId);
-        if (trip == null)
+        using var transaction = _context.Database.IsSqlServer() 
+            ? await _context.Database.BeginTransactionAsync() 
+            : null;
+
+        try
         {
-            throw new InvalidOperationException("Trip not found.");
-        }
-
-        if (trip.AvailableSeats < dto.NumberOfTravellers)
-        {
-            throw new InvalidOperationException($"OVERBOOKING PREVENTED: Only {trip.AvailableSeats} seat(s) available for this trip!");
-        }
-
-        // Generate Booking Reference
-        var codePrefix = trip.TripCode.Length >= 3 ? trip.TripCode.Substring(0, 3) : "TRP";
-        var randomNum = new Random().Next(1000, 9999);
-        var bookingRef = $"BK-{codePrefix}-{randomNum}";
-
-        decimal totalAmount = trip.BasePrice * dto.NumberOfTravellers;
-        decimal paidAmount = 0m;
-
-        PaymentStatus initialPaymentStatus = PaymentStatus.Pending;
-        if (dto.PaymentType.Equals("Full", StringComparison.OrdinalIgnoreCase))
-        {
-            paidAmount = totalAmount;
-            initialPaymentStatus = PaymentStatus.Paid;
-        }
-        else if (dto.PaymentType.Equals("Deposit", StringComparison.OrdinalIgnoreCase))
-        {
-            paidAmount = dto.AmountToPay > 0 ? dto.AmountToPay : totalAmount * 0.3m;
-            initialPaymentStatus = PaymentStatus.PartiallyPaid;
-        }
-
-        decimal balanceAmount = Math.Max(0, totalAmount - paidAmount);
-
-        var booking = new Booking
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = orgId,
-            TripId = dto.TripId,
-            BookedByUserId = userId,
-            BookingReference = bookingRef,
-            BookingDate = DateTime.UtcNow,
-            NumberOfTravellers = dto.NumberOfTravellers,
-            TotalAmount = totalAmount,
-            PaidAmount = paidAmount,
-            BalanceAmount = balanceAmount,
-            PaymentStatus = initialPaymentStatus,
-            BookingStatus = BookingStatus.Confirmed,
-            ContactEmail = dto.ContactEmail,
-            ContactPhone = dto.ContactPhone,
-            SpecialRequests = dto.SpecialRequests,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        // Attach Travellers
-        foreach (var tDto in dto.Travellers)
-        {
-            var existing = await _context.Travellers
-                .FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Email.ToLower() == tDto.Email.ToLower());
-
-            if (existing == null)
+            Trip? trip = null;
+            if (_context.Database.IsSqlServer())
             {
-                existing = new Traveller
-                {
-                    Id = Guid.NewGuid(),
-                    OrganizationId = orgId,
-                    FirstName = string.IsNullOrWhiteSpace(tDto.FirstName) ? "Passenger" : tDto.FirstName.Trim(),
-                    LastName = string.IsNullOrWhiteSpace(tDto.LastName) ? "Traveller" : tDto.LastName.Trim(),
-                    Email = tDto.Email.Trim(),
-                    MobileNumber = string.IsNullOrWhiteSpace(tDto.MobileNumber) ? dto.ContactPhone : tDto.MobileNumber.Trim(),
-                    Status = true,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.Travellers.Add(existing);
+                trip = await _context.Trips
+                    .FromSqlRaw("SELECT * FROM Trips WITH (UPDLOCK, ROWLOCK) WHERE Id = {0} AND OrganizationId = {1}", dto.TripId, orgId)
+                    .FirstOrDefaultAsync();
+            }
+            else
+            {
+                trip = await _context.Trips.FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Id == dto.TripId);
             }
 
-            booking.BookingTravellers.Add(new BookingTraveller
+            if (trip == null)
             {
-                Id = Guid.NewGuid(),
-                BookingId = booking.Id,
-                TravellerId = existing.Id,
-                RoomPreference = tDto.RoomPreference ?? "Single",
-                DietaryPreference = tDto.DietaryPreference ?? "Regular"
-            });
-        }
+                throw new InvalidOperationException("Trip not found.");
+            }
 
-        // Record Initial Payment if paid > 0 (Legacy/Mock instant payment path)
-        if (paidAmount > 0)
-        {
-            booking.Payments.Add(new Payment
+            if (trip.AvailableSeats < dto.NumberOfTravellers)
+            {
+                throw new InvalidOperationException($"OVERBOOKING PREVENTED: Only {trip.AvailableSeats} seat(s) available for this trip!");
+            }
+
+            // Generate Booking Reference
+            var codePrefix = trip.TripCode.Length >= 3 ? trip.TripCode.Substring(0, 3) : "TRP";
+            var randomNum = new Random().Next(1000, 9999);
+            var bookingRef = $"BK-{codePrefix}-{randomNum}";
+
+            // Calculate GST Tax
+            decimal taxableAmount = trip.BasePrice * dto.NumberOfTravellers;
+            var org = await _context.Organizations.FirstOrDefaultAsync(o => o.Id == orgId);
+            
+            TaxBreakdownDto tax;
+            if (org != null && !string.IsNullOrEmpty(org.GSTIN))
+            {
+                var operatorState = org.State ?? org.City ?? "Karnataka";
+                var customerState = dto.BillingState ?? operatorState;
+                tax = _taxService.CalculateGst(taxableAmount, operatorState, customerState);
+            }
+            else
+            {
+                tax = new TaxBreakdownDto(taxableAmount, 0m, 0m, 0m, 0m, 0m, taxableAmount);
+            }
+            
+            decimal totalAmount = tax.GrandTotal;
+            decimal paidAmount = 0m;
+
+            PaymentStatus initialPaymentStatus = PaymentStatus.Pending;
+            if (dto.PaymentType.Equals("Full", StringComparison.OrdinalIgnoreCase))
+            {
+                paidAmount = totalAmount;
+                initialPaymentStatus = PaymentStatus.Paid;
+            }
+            else if (dto.PaymentType.Equals("Deposit", StringComparison.OrdinalIgnoreCase))
+            {
+                paidAmount = dto.AmountToPay > 0 ? dto.AmountToPay : totalAmount * 0.3m;
+                initialPaymentStatus = PaymentStatus.PartiallyPaid;
+            }
+
+            decimal balanceAmount = Math.Max(0, totalAmount - paidAmount);
+
+            var booking = new Booking
             {
                 Id = Guid.NewGuid(),
                 OrganizationId = orgId,
-                BookingId = booking.Id,
-                Amount = paidAmount,
-                PaymentMethod = dto.PaymentType.Equals("Full", StringComparison.OrdinalIgnoreCase) ? "Mock Card (Full)" : "Mock Card (Deposit)",
-                TransactionReference = $"TXN-MOCK-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
-                Provider = "Mock",
-                Currency = trip.Currency,
-                PaymentType = dto.PaymentType,
-                Status = PaymentStatus.Paid,
-                PaymentDate = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow,
-                Notes = "Mock Payment Processed Successfully"
+                TripId = dto.TripId,
+                BookedByUserId = userId,
+                BookingReference = bookingRef,
+                BookingDate = DateTime.UtcNow,
+                NumberOfTravellers = dto.NumberOfTravellers,
+                TotalAmount = totalAmount,
+                PaidAmount = paidAmount,
+                BalanceAmount = balanceAmount,
+                TaxableAmount = tax.TaxableAmount,
+                GstPercentage = tax.GstPercentage,
+                CGST = tax.CGST,
+                SGST = tax.SGST,
+                IGST = tax.IGST,
+                TotalTax = tax.TotalTax,
+                PaymentStatus = initialPaymentStatus,
+                BookingStatus = BookingStatus.Confirmed,
+                ContactEmail = dto.ContactEmail,
+                ContactPhone = dto.ContactPhone,
+                SpecialRequests = dto.SpecialRequests,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Attach Travellers
+            foreach (var tDto in dto.Travellers)
+            {
+                var existing = await _context.Travellers
+                    .FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Email.ToLower() == tDto.Email.ToLower());
+
+                if (existing == null)
+                {
+                    existing = new Traveller
+                    {
+                        Id = Guid.NewGuid(),
+                        OrganizationId = orgId,
+                        FirstName = string.IsNullOrWhiteSpace(tDto.FirstName) ? "Passenger" : tDto.FirstName.Trim(),
+                        LastName = string.IsNullOrWhiteSpace(tDto.LastName) ? "Traveller" : tDto.LastName.Trim(),
+                        Email = tDto.Email.Trim(),
+                        MobileNumber = string.IsNullOrWhiteSpace(tDto.MobileNumber) ? dto.ContactPhone : tDto.MobileNumber.Trim(),
+                        Status = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Travellers.Add(existing);
+                }
+
+                booking.BookingTravellers.Add(new BookingTraveller
+                {
+                    Id = Guid.NewGuid(),
+                    BookingId = booking.Id,
+                    TravellerId = existing.Id,
+                    RoomPreference = tDto.RoomPreference ?? "Single",
+                    DietaryPreference = tDto.DietaryPreference ?? "Regular"
+                });
+            }
+
+            // Record Initial Payment if paid > 0
+            if (paidAmount > 0)
+            {
+                booking.Payments.Add(new Payment
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = orgId,
+                    BookingId = booking.Id,
+                    Amount = paidAmount,
+                    PaymentMethod = dto.PaymentType.Equals("Full", StringComparison.OrdinalIgnoreCase) ? "Mock Card (Full)" : "Mock Card (Deposit)",
+                    TransactionReference = $"TXN-MOCK-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
+                    Provider = "Mock",
+                    Currency = trip.Currency,
+                    PaymentType = dto.PaymentType,
+                    Status = PaymentStatus.Paid,
+                    PaymentDate = DateTime.UtcNow,
+                    CompletedAt = DateTime.UtcNow,
+                    Notes = "Mock Payment Processed Successfully"
+                });
+            }
+
+            // Deduct available seats
+            trip.AvailableSeats = Math.Max(0, trip.AvailableSeats - dto.NumberOfTravellers);
+            if (trip.AvailableSeats == 0)
+            {
+                trip.Status = TripStatus.FullyBooked;
+            }
+            else if (trip.AvailableSeats <= 3)
+            {
+                trip.Status = TripStatus.AlmostFull;
+            }
+
+            // Create In-App Notification
+            _context.Notifications.Add(new Notification
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = orgId,
+                Title = "New Booking Confirmed",
+                Message = $"New booking {bookingRef} created for {trip.TripName} ({dto.NumberOfTravellers} traveller(s)). Amount Paid: INR {paidAmount:N2}.",
+                Type = NotificationType.BookingCreated,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
             });
+
+            // Audit Log
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = orgId,
+                User = userId.HasValue ? "AuthenticatedUser" : dto.ContactEmail,
+                Action = "BookingCreated",
+                Entity = "Booking",
+                EntityId = booking.Id.ToString(),
+                Details = $"Booking {bookingRef} created for {trip.TripName}. Available seats updated to {trip.AvailableSeats}.",
+                Timestamp = DateTime.UtcNow
+            });
+
+            _context.Bookings.Add(booking);
+            await _context.SaveChangesAsync();
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+
+            return await GetBookingByIdAsync(orgId, booking.Id) ?? MapToDto(booking);
         }
-
-        // DEDUCT AVAILABLE SEATS
-        trip.AvailableSeats = Math.Max(0, trip.AvailableSeats - dto.NumberOfTravellers);
-        if (trip.AvailableSeats == 0)
+        catch
         {
-            trip.Status = TripStatus.FullyBooked;
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            throw;
         }
-        else if (trip.AvailableSeats <= 3)
-        {
-            trip.Status = TripStatus.AlmostFull;
-        }
-
-        // Create In-App Notification
-        _context.Notifications.Add(new Notification
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = orgId,
-            Title = "New Booking Confirmed",
-            Message = $"New booking {bookingRef} created for {trip.TripName} ({dto.NumberOfTravellers} traveller(s)). Amount Paid: ${paidAmount:N2}.",
-            Type = NotificationType.BookingCreated,
-            IsRead = false,
-            CreatedAt = DateTime.UtcNow
-        });
-
-        // Audit Log
-        _context.AuditLogs.Add(new AuditLog
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = orgId,
-            User = userId.HasValue ? "AuthenticatedUser" : dto.ContactEmail,
-            Action = "BookingCreated",
-            Entity = "Booking",
-            EntityId = booking.Id.ToString(),
-            Details = $"Booking {bookingRef} created for {trip.TripName}. Available seats updated to {trip.AvailableSeats}.",
-            Timestamp = DateTime.UtcNow
-        });
-
-        _context.Bookings.Add(booking);
-        await _context.SaveChangesAsync();
-
-        return await GetBookingByIdAsync(orgId, booking.Id) ?? MapToDto(booking);
     }
 
     public async Task<bool> ConfirmBookingAsync(Guid orgId, Guid bookingId)
@@ -503,6 +558,12 @@ public class BookingService : IBookingService
         b.TotalAmount,
         b.PaidAmount,
         b.BalanceAmount,
+        b.TaxableAmount,
+        b.GstPercentage,
+        b.CGST,
+        b.SGST,
+        b.IGST,
+        b.TotalTax,
         b.PaymentStatus,
         b.BookingStatus,
         b.ContactEmail,

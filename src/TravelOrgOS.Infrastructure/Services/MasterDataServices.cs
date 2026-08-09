@@ -60,6 +60,8 @@ public class MasterDataService : IMasterDataService
         org.Country = dto.Country;
         org.Description = dto.Description;
         org.WhatsAppNumber = dto.WhatsAppNumber;
+        org.GSTIN = dto.GSTIN;
+        org.State = dto.State;
         org.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
@@ -120,6 +122,6 @@ public class MasterDataService : IMasterDataService
     private static OrganizationDto MapOrgToDto(Organization o) => new(
         o.Id, o.Name, o.Slug, o.LegalName, o.LogoUrl, o.PrimaryColor, o.SecondaryColor,
         o.WelcomeMessage, o.Email, o.Phone, o.Website, o.Address, o.City, o.Country,
-        o.BusinessHours, o.Description, o.FacebookUrl, o.InstagramUrl, o.LinkedInUrl, o.WhatsAppNumber, o.Status
+        o.BusinessHours, o.Description, o.FacebookUrl, o.InstagramUrl, o.LinkedInUrl, o.WhatsAppNumber, o.GSTIN, o.State, o.Status
     );
 }

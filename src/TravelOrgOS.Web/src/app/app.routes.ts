@@ -8,6 +8,10 @@ import { TripBuilderComponent } from './components/trips/trip-builder.component'
 import { BookingsListComponent } from './components/bookings/bookings-list.component';
 import { ReportsComponent } from './components/reports/reports.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { GuidesComponent } from './components/guides/guides.component';
+import { TeamComponent } from './components/team/team.component';
+import { MarketingComponent } from './components/marketing/marketing.component';
+import { SubscriptionsComponent } from './components/subscriptions/subscriptions.component';
 
 import { PortalHomeComponent } from './components/portal/portal-home.component';
 import { PortalTripDetailComponent } from './components/portal/portal-trip-detail.component';
@@ -40,7 +44,11 @@ export const routes: Routes = [
       { path: 'trips/new', component: TripBuilderComponent },
       { path: 'trips/:id', component: TripBuilderComponent },
       { path: 'travellers', component: TravellersComponent },
+      { path: 'guides', component: GuidesComponent },
       { path: 'bookings', component: BookingsListComponent },
+      { path: 'team', component: TeamComponent },
+      { path: 'marketing', component: MarketingComponent },
+      { path: 'subscriptions', component: SubscriptionsComponent },
       { path: 'reports', component: ReportsComponent },
       { path: 'settings', component: SettingsComponent }
     ]

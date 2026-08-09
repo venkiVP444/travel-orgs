@@ -1,93 +1,138 @@
 # TravelOrgOS - Travel Organization Operating System
 
-TravelOrgOS is a multi-tenant B2B SaaS platform for travel agencies, tour operators, group tour companies, and travel management organizations. It brings trips, itineraries, travellers, bookings, payments, and fleet operations into one platform while giving travellers a mobile-friendly booking experience branded under each organization's identity.
+TravelOrgOS is an enterprise-grade, multi-tenant B2B SaaS platform for travel agencies, tour operators, group tour companies, and travel management organizations. It manages trips, itineraries, travellers CRM, bookings ledger, payment checkouts, and fleet operations under a single panel while giving customers a mobile-friendly booking experience branded under each organization's identity.
 
-For a comprehensive high-level guide to the system, see the [System Overview](file:///c:/personal/TravelOrgOS/docs/SYSTEM_OVERVIEW.md).
-
----
-
-## CRITICAL DATABASE SAFETY GUARANTEE
-
-> [!CAUTION]
-> **LOCALDB SAFETY ENFORCEMENT**:
-> - TravelOrgOS **NEVER** connects to office server `10.50.6.6` or database `dbEMMA_Restore`.
-> - TravelOrgOS exclusively targets the developer's local SQL Server LocalDB instance `(localdb)\MSSQLLocalDB` and target database `TravelOrgOS_Dev`.
-> - Programmatic assertion `DatabaseSafetyChecker.AssertConnectionIsLocalDbOnly()` executes prior to any database operation.
+For a comprehensive high-level guide to the system, see the [Project Overview](file:///c:/personal/TravelOrgOS/docs/PROJECT_OVERVIEW.md) or the detailed [System Overview](file:///c:/personal/TravelOrgOS/docs/SYSTEM_OVERVIEW.md).
 
 ---
 
-## SSMS Connection Information
+## 1. Product Overview & Core Lifecycle
 
-To inspect TravelOrgOS tables in SQL Server Management Studio (SSMS):
+TravelOrgOS manages the complete travel operational lifecycle:
+- **Organization & Branding**: Setup domain slug, colors, logo, and portal greetings.
+- **Role-Based Access Control**: Enforce separation between Owner, Admin, Trip Coordinator, and Finance User roles.
+- **Trip Stepper Builder**: Construct 11-step trips detailing itinerary days, hotels, vehicles, tour guides, meals, vendors, and deposit pricing.
+- **India GST Support**: Calculate CGST, SGST, and IGST splits based on operator and customer billing states automatically.
+- **Branded Portal**: Mobilized public trip cards list letting travellers checkout with automatic seat deductions.
+- **Payment Gateway Integrity**: Fully integrated webhooks verifying Razorpay & Stripe signatures securely.
+- **SaaS Entitlement Engine**: Intercept creations that exceed active subscription quotas (limits on team members, active trips, and monthly bookings).
 
+---
+
+## 2. Platform Architecture
+
+The system is constructed using clean, decoupled architectural patterns:
+- **`TravelOrgOS.Domain`**: Core domain entities, enums, and request/response DTO contracts. No external infrastructure dependencies.
+- **`TravelOrgOS.Infrastructure`**: EF Core context mapping, service implementations (`TaxService`, `GuideService`, `TeamService`, `SubscriptionService`), and payment gateway factory providers.
+- **`TravelOrgOS.Api`**: Controllers, routing rules, capability filters (`RequiresPermission`), and `EntitlementMiddleware` pipeline interceptors.
+- **`TravelOrgOS.Web`**: Standalone Angular client featuring side drawer panels, route guards, and responsive layouts.
+
+---
+
+## 3. Prerequisites & Requirements
+
+- **Runtime Target**: .NET 10.0 SDK
+- **SQL Server Database Engine**: LocalDB instance `(localdb)\MSSQLLocalDB`
+- **Frontend Compiler**: Node.js 18+ and NPM 10+
+- **Command Line Helpers**: Entity Framework Core CLI (`dotnet-ef`)
+
+---
+
+## 4. Setup & Running Locally
+
+### Step 1: Initialize Database & Dependencies
+Run the initial safety script to verify LocalDB and install frontend packages:
+```powershell
+.\scripts\setup.ps1
+```
+
+### Step 2: Apply Migrations & Start API Server
+Launch the backend. On startup, the API server automatically applies EF migrations to recreate `TravelOrgOS_Dev` and populate seed data:
+```powershell
+.\scripts\run-api.ps1
+```
+The API listens on: `http://localhost:5100`
+
+### Step 3: Run Web Client
+Compile and serve the Angular UI app:
+```powershell
+.\scripts\run-web.ps1
+```
+The client SPA serves on: `http://localhost:4400`
+
+---
+
+## 5. SSMS Database Connection Info
+
+To inspect tables inside SQL Server Management Studio (SSMS):
 - **Server Type**: Database Engine
 - **Server Name**: `(localdb)\MSSQLLocalDB`
 - **Authentication**: Windows Authentication
 - **Database**: `TravelOrgOS_Dev`
 
-**Full SSMS Connection String**:
+**SSMS Connection String**:
 ```text
-Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TravelOrgOS_Dev;Integrated Security=True;Persist Security Info=False;Pooling=False;MultipleActiveResultSets=False;Connect Timeout=30;Encrypt=False;TrustServerCertificate=True;Application Name="SQL Server Management Studio";Command Timeout=0;
+Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=TravelOrgOS_Dev;Integrated Security=True;Encrypt=False;TrustServerCertificate=True;
 ```
 
 ---
 
-## Demo Credentials
+## 6. Secrets & Production Configuration
 
-All demo accounts use the development password: **`Demo@123`**
+> [warning]
+> Do NOT check secrets, certificates, or database access passwords into source control.
 
-| Role | Email | Access Scope |
+Configuration overrides are resolved from:
+- `appsettings.json` / `appsettings.Development.json` for developer fallbacks.
+- `appsettings.local.json` (git-ignored) for local environment overrides.
+- **Environment Variables** in production mode:
+  - `ConnectionStrings__DefaultConnection` (Database endpoint)
+  - `Jwt__Secret` (HMAC256 signing secret key)
+  - `PaymentGateway__Stripe__WebhookSecret` (Stripe signature verification secret)
+  - `PaymentGateway__Razorpay__KeySecret` (Razorpay signature verification secret)
+
+---
+
+## 7. Demo Credentials & Access Roles
+
+All seeded demo credentials use the password: **`Demo@123`**
+
+| Role | Email | Capabilities & Permissions |
 | :--- | :--- | :--- |
-| **Platform Admin** | `admin@travelorgos.com` | Full platform management |
-| **Organization Owner** | `owner@demo-travel.com` | Full organization & financial access |
-| **Organization Admin** | `manager@demo-travel.com` | Trips, Travellers & Bookings management |
-| **Finance User** | `finance@demo-travel.com` | Revenue, Balances & Payment ledger |
-| **Traveller** | `traveller@demo-travel.com` | Mobile Portal & My Bookings |
+| **Platform Admin** | `admin@travelorgos.com` | Global metrics, global resets |
+| **Organization Owner** | `owner@demo-travel.com` | Full admin, team member management, subscription adjustments |
+| **Organization Admin** | `manager@demo-travel.com` | Manage trips, configure pricing, manage travellers CRM |
+| **Finance User** | `finance@demo-travel.com` | Manage payments ledger, refunds, view GST tax splits |
+| **Trip Coordinator** | `coordinator@demo-travel.com` | Manage vehicles, meals, and guides scheduling assignments |
+| **Traveller** | `traveller@demo-travel.com` | Mobile checkout portal access |
 
 ---
 
-## Quick Start & Running Locally
+## 8. Development Simulation Mode
 
-### 1. Execute Environment Setup Script
-Open PowerShell and run:
-```powershell
-.\scripts\setup.ps1
-```
-
-### 2. Start Backend API
-```powershell
-.\scripts\run-api.ps1
-```
-The API server will run on: `http://localhost:5100`
-
-### 3. Start Angular Web Frontend
-```powershell
-.\scripts\run-web.ps1
-```
-The Angular SPA will run on: `http://localhost:4400`
+When running in development environments, external payments (Stripe/Razorpay) execute in **simulation mode**:
+- Direct checkout URLs return mocks.
+- Testing webhook dispatches to `api/webhooks/stripe` and `api/webhooks/razorpay` require passing valid mock signatures or setting debug headers to simulate payment completions.
 
 ---
 
-## Primary Sales Demo Flow
+## 9. Automated Testing Verification
 
-1. **Login**: Go to `http://localhost:4400` and click **Org Owner** (`owner@demo-travel.com`).
-2. **Dashboard**: Inspect live SaaS KPIs (Active Trips, Travellers, Confirmed Bookings, Revenue, Outstanding Balances).
-3. **Traveller Directory & CSV Import**: View traveller profiles and test batch CSV import with live validation.
-4. **Trip Builder**: Launch the 10-step Trip Builder to configure basic info, dates, itinerary days, hotels, vehicles, meals, vendors, and pricing.
-5. **Publish**: Click **Publish to Traveller Portal Now**.
-6. **Mobile Traveller Portal**: Open `/portal/demo-travel` to view branded portal home and trip catalog.
-7. **Book & Mock Payment**: View trip details, select 2 passengers, select **Pay 30% Deposit Now**, and submit.
-8. **Confirmation & Real-Time Metrics**: View booking confirmation screen `BK-KER-XXXX`. Return to Admin to see booking recorded, seats deducted, and notification generated!
-
----
-
-## Automated Test Verification
-
-Run backend xUnit tests:
+Execute backend unit and integration tests verifying concurrency locks, overlapping calendar rejections, GST state calculations, and subscription entitlement filters:
 ```bash
-dotnet test tests/TravelOrgOS.Api.Tests/TravelOrgOS.Api.Tests.csproj
+dotnet test
 ```
-Tests verify:
-- LocalDB safety connection checks (rejecting `10.50.6.6` / `dbEMMA_Restore`)
-- Seat reservation & overbooking prevention
-- Payment balance calculation
+
+Execute frontend typescript compilation build checks:
+```bash
+npx ng build
+```
+
+---
+
+## 10. Production Deployment
+
+To containerize and deploy to cloud hosting providers:
+1. Compile the Angular static output: `npm run build --prod` and serve using an NGINX container.
+2. Package the ASP.NET Core API using the Dockerfile (targeting `mcr.microsoft.com/dotnet/aspnet:10.0`).
+3. Ensure secrets are injected via secure environment variables rather than hardcoded configs.

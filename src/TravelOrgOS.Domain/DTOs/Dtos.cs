@@ -42,6 +42,8 @@ public record OrganizationDto(
     string? InstagramUrl,
     string? LinkedInUrl,
     string? WhatsAppNumber,
+    string? GSTIN,
+    string? State,
     bool Status
 );
 
@@ -59,7 +61,9 @@ public record UpdateOrganizationDto(
     string? City,
     string? Country,
     string? Description,
-    string? WhatsAppNumber
+    string? WhatsAppNumber,
+    string? GSTIN,
+    string? State
 );
 
 // --- TRAVELLER DTOs ---
@@ -166,7 +170,8 @@ public record TripDto(
     List<TripHotelDto> Hotels,
     List<TripVehicleDto> Vehicles,
     List<TripVendorDto> Vendors,
-    List<TripMealDto> Meals
+    List<TripMealDto> Meals,
+    List<TripGuideDto> Guides
 );
 
 public record CreateTripDto(
@@ -264,6 +269,12 @@ public record BookingDto(
     decimal TotalAmount,
     decimal PaidAmount,
     decimal BalanceAmount,
+    decimal TaxableAmount,
+    decimal GstPercentage,
+    decimal CGST,
+    decimal SGST,
+    decimal IGST,
+    decimal TotalTax,
     PaymentStatus PaymentStatus,
     BookingStatus BookingStatus,
     string ContactEmail,
@@ -290,7 +301,8 @@ public record CreateBookingDto(
     string? SpecialRequests,
     [Required] List<CreateBookingTravellerDto> Travellers,
     [Required] string PaymentType,
-    decimal AmountToPay
+    decimal AmountToPay,
+    string? BillingState = null
 );
 
 public record CreateBookingTravellerDto(
@@ -426,3 +438,134 @@ public record RazorpayVerificationDto(
     [Required] string PaymentType,
     [Required] decimal Amount
 );
+
+// --- GUIDE DTOs ---
+public record GuideDto(
+    Guid Id,
+    Guid OrganizationId,
+    string Name,
+    string Phone,
+    string Email,
+    string Languages,
+    string Specializations,
+    int ExperienceYears,
+    string? LicenseNumber,
+    bool Status,
+    string? Notes,
+    DateTime CreatedAt
+);
+
+public record CreateGuideDto(
+    [Required, MaxLength(150)] string Name,
+    [Required, MaxLength(50)] string Phone,
+    [Required, EmailAddress, MaxLength(200)] string Email,
+    [MaxLength(200)] string Languages,
+    [MaxLength(500)] string Specializations,
+    int ExperienceYears,
+    [MaxLength(100)] string? LicenseNumber,
+    string? Notes
+);
+
+// --- TEAM DTOs ---
+public record TeamMemberDto(
+    Guid Id,
+    Guid? OrganizationId,
+    string FullName,
+    string Email,
+    UserRole Role,
+    bool Status,
+    DateTime CreatedAt,
+    DateTime? LastLoginAt
+);
+
+public record InviteTeamMemberDto(
+    [Required, EmailAddress] string Email,
+    [Required, MaxLength(150)] string FullName,
+    [Required] UserRole Role
+);
+
+public record AcceptInviteDto(
+    [Required] string Token,
+    [Required] string Password
+);
+
+// --- TAX DTOs ---
+public record TaxBreakdownDto(
+    decimal TaxableAmount,
+    decimal GstPercentage,
+    decimal CGST,
+    decimal SGST,
+    decimal IGST,
+    decimal TotalTax,
+    decimal GrandTotal
+);
+
+// --- MARKETING DTOs ---
+public record CampaignDto(
+    Guid Id,
+    Guid OrganizationId,
+    string Name,
+    CampaignType Type,
+    CampaignStatus Status,
+    string Subject,
+    string BodyTemplate,
+    string TargetSegmentQuery,
+    DateTime? ScheduledFor,
+    DateTime? SentAt,
+    DateTime CreatedAt
+);
+
+public record CreateCampaignDto(
+    [Required, MaxLength(200)] string Name,
+    CampaignType Type,
+    [Required] string Subject,
+    [Required] string BodyTemplate,
+    [Required] string TargetSegmentQuery,
+    DateTime? ScheduledFor
+);
+
+// --- CHAT DTOs ---
+public record ChatMessageDto(
+    Guid Id,
+    Guid OrganizationId,
+    Guid? TripId,
+    Guid? BookingId,
+    string SenderName,
+    string MessageText,
+    MessageType MessageType,
+    string? AttachmentUrl,
+    DateTime Timestamp
+);
+
+public record CreateChatMessageDto(
+    Guid? TripId,
+    Guid? BookingId,
+    [Required] string SenderName,
+    [Required] string MessageText,
+    MessageType MessageType,
+    string? AttachmentUrl
+);
+
+// --- SUBSCRIPTION DTOs ---
+public record SubscriptionQuotaDto(
+    Guid Id,
+    Guid OrganizationId,
+    SubscriptionTier Tier,
+    int MaxActiveTrips,
+    int MaxTeamMembers,
+    int MaxBookingsPerMonth,
+    bool Status,
+    DateTime ExpiryDate,
+    DateTime CreatedAt
+);
+
+public record TripGuideDto(
+    Guid Id,
+    Guid GuideId,
+    string Name,
+    string Phone,
+    string? LicenseNumber,
+    string? Notes
+);
+
+

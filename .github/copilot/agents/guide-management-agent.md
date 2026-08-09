@@ -1,29 +1,45 @@
-# Guide Management Agent
+﻿# Guide Management Agent
 
 ## 1. Purpose
-Manages host guides, tour leads, language skills, expertise lists, and calendar assignments.
+Orchestrates tour guide profiles, certification details, language proficiencies, scheduling, and calendar conflicts.
 
 ## 2. Domain Responsibility
-- Handles guide profiles, language capabilities, destination areas, and trip scheduling logs.
+- Handles guide directory profiles, language competencies, daily fee rates, calendars, and trip assignments.
 
-## 3. Files to Inspect Before Modifying
-- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Needs Guide entity implementation)
+## 3. Current Repository Reality
+- Entirely missing from domain entities and UI. Guide details are currently represented by a single text field HostGuide on the Trip table.
+
+## 4. Files to Inspect Before Modifying
+- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Create Guide entity)
 - [TripService.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/TripService.cs)
+- [MasterDataControllers.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/MasterDataControllers.cs)
 
-## 4. Database Rules
-- Introduce the new `Guide` domain table with appropriate foreign keys.
+## 5. Database Rules
+- Add a new Guide table with relationships to OrganizationId and TripGuides.
 
-## 5. API Rules
-- Block guide assignments that conflict with existing trip dates (Overbooking check).
+## 6. API Rules
+- Block guide allocation to trips that contain date overlaps (Prevent double-bookings).
 
-## 6. UI Rules
-- Enable profile management for guide skills, certifications, and languages.
+## 7. Frontend Rules
+- Build a Guide Management page and integrate guide selection into the Trip Builder wizard.
 
-## 7. Validation Rules
-- Enforce valid phone numbers and calendar parameters.
+## 8. Security Rules
+- Guide contact details and fee agreements must not leak to other organizations.
 
-## 8. Security & Isolation
-- Scope guide calendars strictly within the organization's bounds.
+## 9. Integration Dependencies
+- Relies on Trip Management and Finance.
 
-## 9. Definition of Done
-- Guide profiles can be assigned to trips without overlapping conflicts.
+## 10. India-Specific Considerations
+- Track localized language certifications (e.g., Kannada, Tamil, Telugu, Hindi, Malayalam) and local state tourism badges.
+
+## 11. Testing Requirements
+- Integration tests checking guide booking overlaps across multiple trips.
+
+## 12. Production-Readiness Requirements
+- Handle guide profile statuses (Active, Inactive, OnLeave).
+
+## 13. Anti-Patterns
+- Saving guide details as simple text strings in trip logs.
+
+## 14. Definition of Done
+- Guide database schema defined, conflict prevention active, and profile CRUD functional.

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
 using System.Text;
+using TravelOrgOS.Api.Authorization;
 using TravelOrgOS.Api.DTOs;
 using TravelOrgOS.Infrastructure.Services;
 
@@ -22,6 +23,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpGet]
+    [RequiresPermission("Booking.View")]
     public async Task<IActionResult> GetBookings([FromQuery] string? search)
     {
         var bookings = await _bookingService.GetBookingsAsync(GetOrgId(), search);
@@ -29,6 +31,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpGet("{id:guid}")]
+    [RequiresPermission("Booking.View")]
     public async Task<IActionResult> GetBooking(Guid id)
     {
         var booking = await _bookingService.GetBookingByIdAsync(GetOrgId(), id);
@@ -73,6 +76,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpPost]
+    [RequiresPermission("Booking.Create")]
     public async Task<IActionResult> CreateBooking([FromBody] CreateBookingDto dto)
     {
         try
@@ -106,6 +110,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/pay")]
+    [RequiresPermission("Payment.Record")]
     public async Task<IActionResult> InitiatePayment(Guid id, [FromBody] InitiatePaymentSessionDto dto)
     {
         try
@@ -141,6 +146,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/confirm")]
+    [RequiresPermission("Booking.Create")]
     public async Task<IActionResult> ConfirmBooking(Guid id)
     {
         var result = await _bookingService.ConfirmBookingAsync(GetOrgId(), id);
@@ -149,6 +155,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/cancel")]
+    [RequiresPermission("Booking.Cancel")]
     public async Task<IActionResult> CancelBooking(Guid id)
     {
         var result = await _bookingService.CancelBookingAsync(GetOrgId(), id);
@@ -157,6 +164,7 @@ public class BookingsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/payment")]
+    [RequiresPermission("Payment.Record")]
     public async Task<IActionResult> RecordPayment(Guid id, [FromBody] RecordPaymentDto dto)
     {
         var result = await _bookingService.RecordPaymentAsync(GetOrgId(), id, dto);

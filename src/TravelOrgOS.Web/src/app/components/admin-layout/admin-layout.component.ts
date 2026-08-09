@@ -40,8 +40,20 @@ import { ApiService } from '../../services/api.service';
           <a routerLink="/travellers" routerLinkActive="active" class="nav-item">
             <i class="fa-solid fa-users"></i> Travellers
           </a>
+          <a routerLink="/guides" routerLinkActive="active" class="nav-item">
+            <i class="fa-solid fa-user-tie"></i> Guides
+          </a>
           <a routerLink="/bookings" routerLinkActive="active" class="nav-item">
             <i class="fa-solid fa-receipt"></i> Bookings
+          </a>
+          <a routerLink="/team" routerLinkActive="active" class="nav-item">
+            <i class="fa-solid fa-users-gear"></i> Team Management
+          </a>
+          <a routerLink="/marketing" routerLinkActive="active" class="nav-item">
+            <i class="fa-solid fa-bullhorn"></i> Marketing Campaigns
+          </a>
+          <a routerLink="/subscriptions" routerLinkActive="active" class="nav-item">
+            <i class="fa-solid fa-credit-card"></i> Subscriptions
           </a>
           <a routerLink="/reports" routerLinkActive="active" class="nav-item">
             <i class="fa-solid fa-file-export"></i> Reports

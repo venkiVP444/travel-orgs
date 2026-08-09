@@ -1,29 +1,44 @@
-# Subscription Agent
+﻿# Subscription Agent
 
 ## 1. Purpose
-Manages tenant plan selections, features enablement, and limits check triggers.
+Governs tenant subscription tiers, billing limits, active feature authorizations, and system usage meters.
 
 ## 2. Domain Responsibility
-- Handles limits validation for total trips, members count, and booking thresholds.
+- Handles subscription plan parameters, total trips counts, member limits, and entitlement checks.
 
-## 3. Files to Inspect Before Modifying
+## 3. Current Repository Reality
+- Completely missing. No limits checking filters, subscriptions mapping, or plans entities exist.
+
+## 4. Files to Inspect Before Modifying
 - [Program.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Program.cs)
 - [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Organization status details)
 
-## 4. Database Rules
-- Organization plan statuses must reside in tenant mapping fields.
+## 5. Database Rules
+- Entitlements and quotas rules must be configured inside dedicated billing schemas.
 
-## 5. API Rules
-- Block creation commands if organizational limits have been reached.
+## 6. API Rules
+- Intercept creation calls (Trips, Bookings, Members) via middleware to verify quotas.
 
-## 6. UI Rules
-- Provide clear displays when plan quotas are near limits.
+## 7. Frontend Rules
+- Display clear warnings when billing limits are near capacity or have been exceeded.
 
-## 7. Validation Rules
-- Enforce strict checks against current database counts.
+## 8. Security Rules
+- Quotas and limit constraints must be validated strictly on the server.
 
-## 8. Security & Isolation
-- Limit definitions must not be overrideable from the frontend.
+## 9. Integration Dependencies
+- Relies on Authentication/Security and governing middleware.
 
-## 9. Definition of Done
-- Plan blocks operate correctly during creation requests.
+## 10. India-Specific Considerations
+- Support B2B SaaS e-invoicing and tax rules for Indian corporate billing.
+
+## 11. Testing Requirements
+- Unit tests verifying that creation requests are blocked once quotas are exceeded.
+
+## 12. Production-Readiness Requirements
+- Support graceful trial expiration warnings.
+
+## 13. Anti-Patterns
+- Scattering limit checks inside separate controller files instead of utilizing central middleware filters.
+
+## 14. Definition of Done
+- Central quota validator integrated, middleware checks active, and warnings UI complete.

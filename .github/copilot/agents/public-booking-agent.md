@@ -1,29 +1,46 @@
-# Public Booking Agent
+﻿# Public Booking Agent
 
 ## 1. Purpose
-Manages public trip catalog routes, checkout operations, and direct bookings creation.
+Manages public passenger routes, checkout screens, passenger profiles inputs, and direct bookings creation.
 
 ## 2. Domain Responsibility
-- Handles public registration flows, seat counts, and payment gateway redirects.
+- Handles public trip catalog layouts, passenger booking forms, and payment redirects.
 
-## 3. Files to Inspect Before Modifying
-- [BookingService.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/BookingService.cs) (Portal checkout functions)
+## 3. Current Repository Reality
+- Public booking portal and detail routes exist.
+- Lacks anti-spam captcha, booking locks, and confirmation validation screens.
+
+## 4. Files to Inspect Before Modifying
+- [BookingService.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/BookingService.cs)
 - [BookingsController.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/BookingsController.cs)
+- [portal-booking.component.ts](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Web/src/app/components/portal/portal-booking.component.ts)
 
-## 4. Database Rules
-- Assign appropriate organization mappings to public bookings.
+## 5. Database Rules
+- Assign appropriate tenant GUID mappings to bookings made through public forms.
 
-## 5. API Rules
-- Do not expose administrative context in public endpoints.
+## 6. API Rules
+- Validate email, phone, and seat parameters. Return clean errors for missing fields.
 
-## 6. UI Rules
-- Enable mobile-first checkout screens.
+## 7. Frontend Rules
+- Force mobile-responsive layouts tailored to customized brand colors.
 
-## 7. Validation Rules
-- Enforce seat count validation and duplicate submission limits.
+## 8. Security Rules
+- Public endpoints must not expose private customer lists or tenant administration routes.
 
-## 8. Security & Isolation
-- Do not leak private participant lists via public trip tokens.
+## 9. Integration Dependencies
+- Relies on Booking and Payments.
 
-## 9. Definition of Done
-- Guests can book trips successfully, and seat counts update correctly.
+## 10. India-Specific Considerations
+- Support UPI, Razorpay payment flows, and localized mobile phone formats.
+
+## 11. Testing Requirements
+- Integration tests validating guest booking submissions correct seat reductions.
+
+## 12. Production-Readiness Requirements
+- Implement rate-limiting validations on checkout endpoints.
+
+## 13. Anti-Patterns
+- Permitting checkout booking processing without active seat capacity confirmation.
+
+## 14. Definition of Done
+- Checkout complete, seat deductions validated, and redirects secure.

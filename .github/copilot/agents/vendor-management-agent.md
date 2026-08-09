@@ -1,32 +1,46 @@
-# Vendor Management Agent
+﻿# Vendor Management Agent
 
 ## 1. Purpose
-Manages third-party suppliers, partner accommodations, restaurant lists, local operators, contracts, and payout statuses.
+Manages agreements, contracts, locations, service attributes, and payouts for third-party operators (hotels, restaurants, transport, guides).
 
 ## 2. Domain Responsibility
-- Governs vendor profiles, hotel inventories, transport services, activities partners, contract terms, and supplier ledger entries.
+- Handles vendor directories, pricing agreements, contract documents, service categories, and payable records.
 
-## 3. Files to Inspect Before Modifying
-- [MasterDataControllers.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/MasterDataControllers.cs) (Vendors controller)
+## 3. Current Repository Reality
+- Basic CRUD endpoints and tables exist for Vendors and Hotels.
+- Vendor ledger, balances tracker, and contract expiration warnings do not exist.
+
+## 4. Files to Inspect Before Modifying
 - [MasterDataServices.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/MasterDataServices.cs)
-- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Vendor, Hotel entities)
+- [MasterDataControllers.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/MasterDataControllers.cs)
+- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs) (Vendor/Hotel tables)
 
-## 4. Database Rules
-- Relational integrity must be maintained when connecting vendors to trips and itineraries.
+## 5. Database Rules
+- Maintain foreign key relations between trips and assigned vendors.
 
-## 5. API Rules
-- Filter lookup queries by organization context.
-- Support categorization by type (Hotel, Transport, Activity, etc.).
+## 6. API Rules
+- Filter lookup listings contextually based on the user's organization GUID.
 
-## 6. UI Rules
-- Display clear forms for contact detail fields, location addresses, and contract documents.
+## 7. Frontend Rules
+- Provide forms for locations, service lists, contact persons, and contract parameters.
 
-## 7. Validation Rules
-- Mandatory vendor name and business type checks.
+## 8. Security Rules
+- Keep contract pricing sheets restricted to authorized team roles.
 
-## 8. Security & Isolation
-- Prevent tenant users from seeing pricing agreements of another tenant.
+## 9. Integration Dependencies
+- Relies on Finance and Trip scheduling modules.
 
-## 9. Definition of Done
-- CRUD actions tested successfully.
-- Relational mapping verifies associated trip count calculations.
+## 10. India-Specific Considerations
+- Validate 15-character GSTIN (GST Number) formats and track HSN/SAC codes.
+
+## 11. Testing Requirements
+- Verify constraint violations are thrown when attempting to delete vendors currently assigned to active trips.
+
+## 12. Production-Readiness Requirements
+- Support digital contract document uploads architecture.
+
+## 13. Anti-Patterns
+- Hardcoding vendor rates outside of specific contract entities.
+
+## 14. Definition of Done
+- Vendor CRUD validated, GSTIN format matching active, and trip mappings verified.

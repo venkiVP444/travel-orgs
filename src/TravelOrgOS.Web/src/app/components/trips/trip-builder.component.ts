@@ -14,7 +14,7 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
       <div class="page-header">
         <div>
           <h2>{{ isEdit ? 'Edit Trip Package' : 'Multi-Step Trip Builder' }}</h2>
-          <p class="subtitle">Design detailed itineraries, hotels, transport, pricing, and publish</p>
+          <p class="subtitle">Design detailed itineraries, hotels, transport, guides, pricing, and publish</p>
         </div>
         <div class="header-actions">
           <button (click)="saveDraft()" class="btn btn-outline">
@@ -26,7 +26,7 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
         </div>
       </div>
 
-      <!-- 10-STEP STEPPER HEADER -->
+      <!-- 11-STEP STEPPER HEADER -->
       <div class="stepper-header card">
         <div *ngFor="let s of steps; let i = index" 
              (click)="goToStep(i + 1)"
@@ -149,16 +149,12 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
             <div class="form-row">
               <div class="form-group col">
                 <label class="form-label">Day Title</label>
-                <input type="text" [(ngModel)]="day.title" class="form-control" placeholder="Title of day activities">
-              </div>
-              <div class="form-group col">
-                <label class="form-label">Location</label>
-                <input type="text" [(ngModel)]="day.location" class="form-control">
+                <input type="text" [(ngModel)]="day.title" class="form-control" placeholder="e.g. Arrival & Houseboat Cruise">
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Activities & Schedule</label>
-              <textarea [(ngModel)]="day.description" class="form-control" rows="2"></textarea>
+              <label class="form-label">Day Description</label>
+              <textarea [(ngModel)]="day.description" class="form-control" rows="2" placeholder="Activities details..."></textarea>
             </div>
           </div>
         </div>
@@ -166,7 +162,7 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
         <!-- STEP 4: HOTELS -->
         <div *ngIf="currentStep === 4">
           <div class="step-title-row">
-            <h3>Step 4: Hotel Accommodations</h3>
+            <h3>Step 4: Assigned Accommodations & Hotels</h3>
             <button (click)="addHotelRow()" class="btn btn-sm btn-outline"><i class="fa-solid fa-plus"></i> Add Hotel</button>
           </div>
 
@@ -213,9 +209,35 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
           </div>
         </div>
 
-        <!-- STEP 6: MEALS -->
+        <!-- STEP 6: GUIDES -->
         <div *ngIf="currentStep === 6">
-          <h3>Step 6: Meal Plan & Dietary Options</h3>
+          <div class="step-title-row">
+            <h3>Step 6: Assign Tour Guides</h3>
+            <button (click)="addGuideRow()" class="btn btn-sm btn-outline"><i class="fa-solid fa-plus"></i> Assign Guide</button>
+          </div>
+
+          <div *ngFor="let g of trip.guides; let i = index" class="itinerary-box">
+            <div class="form-row">
+              <div class="form-group col">
+                <label class="form-label">Tour Guide</label>
+                <select [(ngModel)]="g.guideId" class="form-control">
+                  <option *ngFor="let mg of masterGuides" [value]="mg.id">{{ mg.name }} ({{ mg.languages }})</option>
+                </select>
+              </div>
+              <div class="form-group col">
+                <label class="form-label">Role / Notes</label>
+                <input type="text" [(ngModel)]="g.notes" class="form-control" placeholder="E.g. Lead Guide / Naturalist">
+              </div>
+              <div class="form-group col-auto align-self-end">
+                <button type="button" (click)="removeGuideRow(i)" class="btn btn-icon btn-danger-text"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 7: MEALS -->
+        <div *ngIf="currentStep === 7">
+          <h3>Step 7: Meal Plan & Dietary Options</h3>
           <p class="sub-text mb-3">Configure included dining and dietary choices (Veg, Non-Veg, Jain, Vegan)</p>
           <div class="form-group">
             <label class="form-label">Meal Inclusions Summary</label>
@@ -223,10 +245,10 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
           </div>
         </div>
 
-        <!-- STEP 7: VENDORS -->
-        <div *ngIf="currentStep === 7">
+        <!-- STEP 8: VENDORS -->
+        <div *ngIf="currentStep === 8">
           <div class="step-title-row">
-            <h3>Step 7: Vendors & Partners</h3>
+            <h3>Step 8: Vendors & Partners</h3>
             <button (click)="addVendorRow()" class="btn btn-sm btn-outline"><i class="fa-solid fa-plus"></i> Add Vendor</button>
           </div>
           <div *ngFor="let v of trip.vendors; let i = index" class="itinerary-box">
@@ -245,9 +267,9 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
           </div>
         </div>
 
-        <!-- STEP 8: PRICING -->
-        <div *ngIf="currentStep === 8">
-          <h3>Step 8: Pricing & Deposit Policy</h3>
+        <!-- STEP 9: PRICING -->
+        <div *ngIf="currentStep === 9">
+          <h3>Step 9: Pricing & Deposit Policy</h3>
           <div class="form-row">
             <div class="form-group col">
               <label class="form-label">Base Price Per Passenger ($) *</label>
@@ -260,9 +282,9 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
           </div>
         </div>
 
-        <!-- STEP 9: PREVIEW -->
-        <div *ngIf="currentStep === 9">
-          <h3>Step 9: Trip Package Preview</h3>
+        <!-- STEP 10: PREVIEW -->
+        <div *ngIf="currentStep === 10">
+          <h3>Step 10: Trip Package Preview</h3>
           <div class="preview-card card">
             <img [src]="trip.coverImageUrl" class="preview-img">
             <h4>{{ trip.tripName }} ({{ trip.tripCode }})</h4>
@@ -271,9 +293,9 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
           </div>
         </div>
 
-        <!-- STEP 10: PUBLISH -->
-        <div *ngIf="currentStep === 10">
-          <h3>Step 10: Ready to Publish</h3>
+        <!-- STEP 11: PUBLISH -->
+        <div *ngIf="currentStep === 11">
+          <h3>Step 11: Ready to Publish</h3>
           <p>Your trip package is fully configured! Click below to publish it to your Branded Traveller Portal.</p>
           <button (click)="publishTrip()" class="btn btn-primary btn-lg mt-3">
             <i class="fa-solid fa-globe"></i> Publish to Traveller Portal Now
@@ -283,7 +305,7 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
         <!-- NAVIGATION FOOTER -->
         <div class="builder-footer">
           <button *ngIf="currentStep > 1" (click)="prevStep()" class="btn btn-secondary">Previous</button>
-          <button *ngIf="currentStep < 10" (click)="nextStep()" class="btn btn-primary">Next Step</button>
+          <button *ngIf="currentStep < 11" (click)="nextStep()" class="btn btn-primary">Next Step</button>
         </div>
       </div>
     </div>
@@ -296,7 +318,6 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
     .stepper-item.active { background: #E3F2FD; color: #1E88E5; }
     .step-num { width: 20px; height: 20px; border-radius: 50%; background: #CBD5E1; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; }
     .stepper-item.active .step-num { background: #1E88E5; }
-
     .builder-body-card { padding: 32px; }
     .step-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .itinerary-box { background: #F8FAFC; border: 1px solid #E2E8F0; padding: 16px; border-radius: 10px; margin-bottom: 16px; }
@@ -305,12 +326,14 @@ import { Trip, ItineraryDay, TripHotel, TripVehicle, TripVendor, TripMeal } from
     .preview-card { padding: 20px; max-width: 500px; }
     .preview-img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
     .builder-footer { display: flex; justify-content: space-between; margin-top: 32px; padding-top: 20px; border-top: 1px solid #E2E8F0; }
+    .btn-danger-text { background: transparent; border: none; color: #EF4444; font-size: 1.1rem; cursor: pointer; }
+    .btn-danger-text:hover { color: #DC2626; }
   `]
 })
 export class TripBuilderComponent implements OnInit {
   steps = [
     'Basic Info', 'Dates & Capacity', 'Itinerary', 'Hotels',
-    'Transport', 'Meals', 'Vendors', 'Pricing', 'Preview', 'Publish'
+    'Transport', 'Guides', 'Meals', 'Vendors', 'Pricing', 'Preview', 'Publish'
   ];
   currentStep = 1;
   isEdit = false;
@@ -321,12 +344,13 @@ export class TripBuilderComponent implements OnInit {
     startDate: '', endDate: '', durationDays: 5, durationNights: 4, tripType: 1,
     totalCapacity: 20, availableSeats: 20, basePrice: 850, currency: 'USD',
     coverImageUrl: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&fit=crop',
-    itineraryDays: [], hotels: [], vehicles: [], vendors: [], meals: []
+    itineraryDays: [], hotels: [], vehicles: [], vendors: [], meals: [], guides: []
   };
 
   masterHotels: any[] = [];
   masterVehicles: any[] = [];
   masterVendors: any[] = [];
+  masterGuides: any[] = [];
   mealSummaryText = 'Daily Breakfast & Traditional Sadhya Lunch Included';
 
   constructor(
@@ -347,6 +371,7 @@ export class TripBuilderComponent implements OnInit {
     this.apiService.getHotels().subscribe(h => this.masterHotels = h);
     this.apiService.getVehicles().subscribe(v => this.masterVehicles = v);
     this.apiService.getVendors().subscribe(v => this.masterVendors = v);
+    this.apiService.getGuides().subscribe(g => this.masterGuides = g.filter(x => x.status));
   }
 
   loadTripDetails(): void {
@@ -354,6 +379,7 @@ export class TripBuilderComponent implements OnInit {
       this.trip = { ...t };
       if (t.startDate) this.trip.startDate = t.startDate.substring(0, 10);
       if (t.endDate) this.trip.endDate = t.endDate.substring(0, 10);
+      this.trip.guides = t.guides ? t.guides.map((g: any) => ({ guideId: g.guideId, notes: g.notes })) : [];
     });
   }
 
@@ -362,7 +388,7 @@ export class TripBuilderComponent implements OnInit {
   }
 
   nextStep(): void {
-    if (this.currentStep < 10) this.currentStep++;
+    if (this.currentStep < 11) this.currentStep++;
   }
 
   prevStep(): void {
@@ -385,6 +411,15 @@ export class TripBuilderComponent implements OnInit {
     this.trip.vehicles.push({ vehicleId: this.masterVehicles[0]?.id || '', notes: 'AC Coach' });
   }
 
+  addGuideRow(): void {
+    if (!this.trip.guides) this.trip.guides = [];
+    this.trip.guides.push({ guideId: this.masterGuides[0]?.id || '', notes: 'Lead Guide' });
+  }
+
+  removeGuideRow(index: number): void {
+    this.trip.guides.splice(index, 1);
+  }
+
   addVendorRow(): void {
     this.trip.vendors.push({ vendorId: this.masterVendors[0]?.id || '', contractAmount: 500 });
   }
@@ -392,12 +427,16 @@ export class TripBuilderComponent implements OnInit {
   saveDraft(): void {
     if (this.isEdit) {
       this.apiService.updateTrip(this.tripId, this.trip).subscribe(() => {
-        alert('Trip package saved as draft!');
+        this.apiService.saveTripGuides(this.tripId, this.trip.guides || []).subscribe(() => {
+          alert('Trip package saved as draft!');
+        });
       });
     } else {
       this.apiService.createTrip(this.trip).subscribe(t => {
-        alert('Trip package created as draft!');
-        this.router.navigate(['/trips']);
+        this.apiService.saveTripGuides(t.id, this.trip.guides || []).subscribe(() => {
+          alert('Trip package created as draft!');
+          this.router.navigate(['/trips']);
+        });
       });
     }
   }
@@ -405,15 +444,19 @@ export class TripBuilderComponent implements OnInit {
   publishTrip(): void {
     if (!this.trip.id) {
       this.apiService.createTrip(this.trip).subscribe(t => {
-        this.apiService.publishTrip(t.id).subscribe(() => {
-          alert('Trip package published to Traveller Portal!');
-          this.router.navigate(['/trips']);
+        this.apiService.saveTripGuides(t.id, this.trip.guides || []).subscribe(() => {
+          this.apiService.publishTrip(t.id).subscribe(() => {
+            alert('Trip package published to Traveller Portal!');
+            this.router.navigate(['/trips']);
+          });
         });
       });
     } else {
-      this.apiService.publishTrip(this.trip.id).subscribe(() => {
-        alert('Trip package published to Traveller Portal!');
-        this.router.navigate(['/trips']);
+      this.apiService.saveTripGuides(this.trip.id, this.trip.guides || []).subscribe(() => {
+        this.apiService.publishTrip(this.trip.id).subscribe(() => {
+          alert('Trip package published to Traveller Portal!');
+          this.router.navigate(['/trips']);
+        });
       });
     }
   }

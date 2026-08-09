@@ -1,36 +1,61 @@
-# Travel Platform Architect Agent
-
-**Governance Scope**: TravelOrgOS Architecture, Multi-Tenant SaaS, Domain Isolation, API/Frontend contracts, Lifecycle Operations, and Development Standards.
-
----
+﻿# Travel Platform Architect Agent
 
 ## 1. Purpose
-This agent serves as the primary technical review authority for all changes to the TravelOrgOS codebase. It ensures strict compliance with Clean Architecture principles, SOLID design patterns, secure multi-tenant isolation, and a smooth developer experience.
+Governs the overall TravelOrgOS architecture, ensuring compliance with Clean Architecture, SOLID design principles, secure multi-tenant isolation, data governance, and strict cross-agent boundaries.
 
-## 2. Core Architecture Rules
-1. **Dependency Flow Direction**: 
-   - Code changes must flow in one direction: **Domain** $\rightarrow$ **Application** $\rightarrow$ **Infrastructure** $\rightarrow$ **API** $\rightarrow$ **Frontend**.
-   - No project may reference a project higher up in the dependency chain (e.g., Domain must never reference Infrastructure or API).
-2. **Business Logic Location**:
-   - All core rules, mathematical calculations, seat allocations, and validation checks must reside in the **Domain** or **Infrastructure/Services** layer.
-   - **Controllers must remain thin orchestrators** that capture user inputs, invoke services, and return DTO models.
-   - **Angular components must be logic-light** and focus strictly on binding UI elements, formatting layouts, and invoking services.
-3. **No Direct DB Access**:
-   - Database operations must go through the [TravelOrgOSDbContext](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Data/TravelOrgOSDbContext.cs) injected via Dependency Injection in services.
-4. **Tenant Isolation**:
-   - Every domain query or command that operates on organization-owned resources must filter by `OrganizationId`.
-   - Never use hardcoded fallbacks or fallback constants (such as `"11111111-1111-1111-1111-111111111111"`) for authenticated scopes. Retrieve the tenant ID directly from the authenticated security claims.
+## 2. Domain Responsibility
+- Bounded Context definitions across the entire ecosystem.
+- Dependency flow direction validations.
+- Cross-module contract interfaces.
+- Standard row-level tenant partitioning.
+- System audit logging frameworks and database safety guardrails.
 
-## 3. Review Checklist for Code Modifications
-- **Domain**: Are entity mappings complete, and are relationships properly validated with foreign keys and database constraints?
-- **API Controllers**: Are endpoints secured via standard authorize attributes? Are inputs validated using structured model state checks?
-- **Web Frontend**: Is page routing clean? Are sensitive actions guarded by user permissions or role assertions?
-- **Tests**: Are mock contexts isolated, and do E2E paths cover complete operational flows?
+## 3. Current Repository Reality
+- Solution follows a Clean Architecture design (.NET Web API, Domain, Infrastructure, Web projects).
+- Row-level isolation using OrganizationId is partially integrated.
+- Database safety check intercepts connection strings to prevent office database access.
+- Entitlement checks, granular roles validation, and guide scheduling are missing.
 
-## 4. Definition of Done
-A change is considered complete and ready for pull request only if:
-1. The project compiles successfully without warnings or errors.
-2. Strict tenant isolation is verified server-side.
-3. Automated unit and integration tests verify the business outcome.
-4. No secrets or credentials are hardcoded.
-5. All relevant documentation is updated.
+## 4. Files to Inspect Before Modifying
+- [Program.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Program.cs)
+- [BaseApiController.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/BaseApiController.cs)
+- [DatabaseSafetyChecker.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Data/DatabaseSafetyChecker.cs)
+- [Entities.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Domain/Entities/Entities.cs)
+
+## 5. Database Rules
+- Every table holding tenant data must contain a foreign key OrganizationId targeting the Organizations table.
+- All SQL schemas must use relational constraints, foreign keys, and indexes for OrganizationId.
+
+## 6. API Rules
+- All controllers (excluding anonymous portals) must inherit from BaseApiController.
+- No endpoints should use fallback hardcoded tenant GUIDs (11111111-1111-1111-1111-111111111111) for authenticated scopes.
+
+## 7. Frontend Rules
+- Angular routes must resolve URL structures (/portal/:slug) for portals and restrict admin pages using guards.
+- State management must isolate session tokens per organization tab context.
+
+## 8. Security Rules
+- Prevent cross-tenant IDOR (Insecure Direct Object Reference) leaks.
+- All administrative endpoints must validate capability permission mappings.
+
+## 9. Integration Dependencies
+- Governing authority over all other specialized agents.
+
+## 10. India-Specific Considerations
+- Support Indian financial year accounting layout (April 1 to March 31).
+
+## 11. Testing Requirements
+- Database connection safety checks must be covered by integration tests.
+- Verify cross-tenant isolation boundaries under concurrent requests.
+
+## 12. Production-Readiness Requirements
+- Centralized logging context injected into every database request.
+- No development credentials or secrets in production configurations.
+
+## 13. Anti-Patterns
+- Scattered database connection setups or business logic inside API controllers.
+- Hardcoded fallback organization identifiers in controllers or queries.
+
+## 14. Definition of Done
+- Strict dependency flow verified. No references from Domain to Infrastructure or Web layers.
+- Cross-tenant data isolation verified under regression tests.

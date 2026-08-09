@@ -1,30 +1,45 @@
-# Analytics Agent
+﻿# Analytics Agent
 
 ## 1. Purpose
-Tracks core dashboard KPIs, aggregates booking timelines, and builds reporting charts.
+Aggregates sales metrics, occupancy details, operational fleet data, and guide utilization reports.
 
 ## 2. Domain Responsibility
-- Handles overall financial trends, revenue counts, booking history collections, and utilization metrics.
+- Handles business KPIs, graphs data aggregates, date limits validations, and CSV downloads formatting.
 
-## 3. Files to Inspect Before Modifying
+## 3. Current Repository Reality
+- Dashboard summary controller serves metrics aggregates.
+- Lacks dynamic date ranges and utilization metrics for vehicles or guides.
+
+## 4. Files to Inspect Before Modifying
 - [DashboardService.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Infrastructure/Services/DashboardService.cs)
 - [DashboardController.cs](file:///c:/personal/TravelOrgOS/src/TravelOrgOS.Api/Controllers/DashboardController.cs)
 
-## 4. Database Rules
-- Compute sums dynamically using indexed columns.
+## 5. Database Rules
+- Optimization of aggregate queries using index parameters.
 
-## 5. API Rules
-- Filter metrics by organization context.
-- Support dynamic date range inputs.
+## 6. API Rules
+- Support parameters for date filtering (startDate and endDate) and scope to organization.
 
-## 6. UI Rules
-- Present clean UI graphs for revenue over time.
+## 7. Frontend Rules
+- Present clean graph charts for metrics over time.
 
-## 7. Validation Rules
-- Prevent calculation errors on empty data ranges.
+## 8. Security Rules
+- Block access to metrics dashboards for Coordinator or Traveller roles.
 
-## 8. Security & Isolation
-- Block data exposure to unauthorized roles.
+## 9. Integration Dependencies
+- Relies on Dashboard and Finance modules.
 
-## 9. Definition of Done
-- Metrics update correctly when switching date ranges.
+## 10. India-Specific Considerations
+- Partition records according to Indian Fiscal Year quarters (Q1-Q4).
+
+## 11. Testing Requirements
+- Verify query speeds and check results output on empty datasets.
+
+## 12. Production-Readiness Requirements
+- Cache results of heavy aggregate queries.
+
+## 13. Anti-Patterns
+- Reading entire database logs to calculate sums in application memory.
+
+## 14. Definition of Done
+- Dynamic date ranges working, metrics rendering, and role permissions checked.

@@ -23,6 +23,7 @@ public interface ITripService
     Task<List<TripVehicleDto>> SaveTripVehiclesAsync(Guid orgId, Guid tripId, List<TripVehicleDto> vehicles);
     Task<List<TripVendorDto>> SaveTripVendorsAsync(Guid orgId, Guid tripId, List<TripVendorDto> vendors);
     Task<List<TripMealDto>> SaveTripMealsAsync(Guid orgId, Guid tripId, List<TripMealDto> meals);
+    Task<List<TripGuideDto>> SaveTripGuidesAsync(Guid orgId, Guid tripId, List<TripGuideDto> guides);
 }
 
 public class TripService : ITripService
@@ -42,6 +43,7 @@ public class TripService : ITripService
             .Include(t => t.TripVehicles).ThenInclude(tv => tv.Vehicle)
             .Include(t => t.TripVendors).ThenInclude(tv => tv.Vendor)
             .Include(t => t.TripMeals)
+            .Include(t => t.TripGuides).ThenInclude(tg => tg.Guide)
             .Where(t => t.OrganizationId == orgId);
 
         if (publicOnly)
@@ -75,6 +77,7 @@ public class TripService : ITripService
             .Include(t => t.TripVehicles).ThenInclude(tv => tv.Vehicle)
             .Include(t => t.TripVendors).ThenInclude(tv => tv.Vendor)
             .Include(t => t.TripMeals)
+            .Include(t => t.TripGuides).ThenInclude(tg => tg.Guide)
             .Where(t => t.OrganizationId == orgId && t.Id == id);
 
         if (publicOnly)
@@ -185,8 +188,25 @@ public class TripService : ITripService
 
     public async Task<bool> PublishTripAsync(Guid orgId, Guid id)
     {
-        var trip = await _context.Trips.FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Id == id);
+        var trip = await _context.Trips
+            .Include(t => t.ItineraryDays)
+            .FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Id == id);
+            
         if (trip == null) return false;
+
+        // PUBLICATION CRITERIA CHECKLIST
+        if (trip.BasePrice <= 0)
+        {
+            throw new InvalidOperationException("A trip cannot be published without a base price greater than zero.");
+        }
+        if (string.IsNullOrWhiteSpace(trip.ContactPerson) || string.IsNullOrWhiteSpace(trip.ContactNumber))
+        {
+            throw new InvalidOperationException("A trip cannot be published without a contact person and contact number.");
+        }
+        if (!trip.ItineraryDays.Any())
+        {
+            throw new InvalidOperationException("A trip cannot be published without at least one itinerary day configured.");
+        }
 
         trip.Status = TripStatus.RegistrationOpen;
         trip.PublishedAt = DateTime.UtcNow;
@@ -355,6 +375,35 @@ public class TripService : ITripService
         var trip = await _context.Trips.Include(t => t.TripVehicles).FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Id == tripId);
         if (trip == null) return new();
 
+        // Validate vehicle conflicts and active status
+        foreach (var v in vehicles)
+        {
+            var vehicle = await _context.Vehicles.FirstOrDefaultAsync(veh => veh.OrganizationId == orgId && veh.Id == v.VehicleId);
+            if (vehicle == null)
+            {
+                throw new InvalidOperationException("Vehicle not found.");
+            }
+            if (!vehicle.Status)
+            {
+                throw new InvalidOperationException($"Vehicle '{vehicle.VehicleName}' is currently inactive.");
+            }
+
+            var hasOverlap = await _context.TripVehicles
+                .Include(tv => tv.Trip)
+                .AnyAsync(tv =>
+                    tv.VehicleId == v.VehicleId &&
+                    tv.TripId != tripId &&
+                    tv.Trip!.OrganizationId == orgId &&
+                    tv.Trip.Status != TripStatus.Cancelled &&
+                    tv.Trip.StartDate <= trip.EndDate &&
+                    tv.Trip.EndDate >= trip.StartDate);
+
+            if (hasOverlap)
+            {
+                throw new InvalidOperationException($"VEHICLE CONFLICT: Vehicle '{vehicle.VehicleName}' is already assigned to another trip during this timeframe!");
+            }
+        }
+
         _context.TripVehicles.RemoveRange(trip.TripVehicles);
 
         var newVehicles = vehicles.Select(v => new TripVehicle
@@ -484,7 +533,70 @@ public class TripService : ITripService
             t.TripHotels.Select(th => new TripHotelDto(th.Id, th.HotelId, th.Hotel != null ? th.Hotel.HotelName : "", th.Hotel != null ? th.Hotel.Location : "", th.RoomType, th.CheckIn, th.CheckOut, th.RoomCount, th.Notes)).ToList(),
             t.TripVehicles.Select(tv => new TripVehicleDto(tv.Id, tv.VehicleId, tv.Vehicle != null ? tv.Vehicle.VehicleName : "", tv.Vehicle != null ? tv.Vehicle.VehicleType : "", tv.Vehicle != null ? tv.Vehicle.Capacity : 0, tv.Vehicle != null ? tv.Vehicle.DriverName : null, tv.Vehicle != null ? tv.Vehicle.DriverPhone : null, tv.Notes)).ToList(),
             t.TripVendors.Select(tv => new TripVendorDto(tv.Id, tv.VendorId, tv.Vendor != null ? tv.Vendor.VendorName : "", tv.Vendor != null ? tv.Vendor.VendorType : VendorType.Other, tv.ContractAmount, tv.ServiceDescription)).ToList(),
-            t.TripMeals.Select(tm => new TripMealDto(tm.Id, tm.MealType, tm.MealOption, tm.Description, tm.DietaryOptions)).ToList()
+            t.TripMeals.Select(tm => new TripMealDto(tm.Id, tm.MealType, tm.MealOption, tm.Description, tm.DietaryOptions)).ToList(),
+            t.TripGuides.Select(tg => new TripGuideDto(tg.Id, tg.GuideId, tg.Guide != null ? tg.Guide.Name : "", tg.Guide != null ? tg.Guide.Phone : "", tg.Guide != null ? tg.Guide.LicenseNumber : null, tg.Notes)).ToList()
         );
+    }
+
+    public async Task<List<TripGuideDto>> SaveTripGuidesAsync(Guid orgId, Guid tripId, List<TripGuideDto> guides)
+    {
+        var trip = await _context.Trips
+            .Include(t => t.TripGuides)
+            .FirstOrDefaultAsync(t => t.OrganizationId == orgId && t.Id == tripId);
+        
+        if (trip == null) return new();
+
+        foreach (var g in guides)
+        {
+            var guide = await _context.Guides.FirstOrDefaultAsync(gd => gd.OrganizationId == orgId && gd.Id == g.GuideId);
+            if (guide == null)
+            {
+                throw new InvalidOperationException("Guide not found.");
+            }
+            if (!guide.Status)
+            {
+                throw new InvalidOperationException($"Guide '{guide.Name}' is currently inactive.");
+            }
+
+            var hasOverlap = await _context.TripGuides
+                .Include(tg => tg.Trip)
+                .AnyAsync(tg =>
+                    tg.GuideId == g.GuideId &&
+                    tg.TripId != tripId &&
+                    tg.Trip!.OrganizationId == orgId &&
+                    tg.Trip.Status != TripStatus.Cancelled &&
+                    tg.Trip.StartDate <= trip.EndDate &&
+                    tg.Trip.EndDate >= trip.StartDate);
+
+            if (hasOverlap)
+            {
+                throw new InvalidOperationException($"GUIDE CONFLICT: Guide '{guide.Name}' is already assigned to another trip during this timeframe!");
+            }
+        }
+
+        _context.TripGuides.RemoveRange(trip.TripGuides);
+
+        var newGuides = guides.Select(g => new TripGuide
+        {
+            Id = Guid.NewGuid(),
+            TripId = tripId,
+            GuideId = g.GuideId,
+            Notes = g.Notes
+        }).ToList();
+
+        _context.TripGuides.AddRange(newGuides);
+        await _context.SaveChangesAsync();
+
+        return await _context.TripGuides
+            .Include(tg => tg.Guide)
+            .Where(tg => tg.TripId == tripId)
+            .Select(tg => new TripGuideDto(
+                tg.Id,
+                tg.GuideId,
+                tg.Guide != null ? tg.Guide.Name : "",
+                tg.Guide != null ? tg.Guide.Phone : "",
+                tg.Guide != null ? tg.Guide.LicenseNumber : null,
+                tg.Notes))
+            .ToListAsync();
     }
 }

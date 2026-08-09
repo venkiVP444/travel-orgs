@@ -1,5 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using TravelOrgOS.Api.Authorization;
 using TravelOrgOS.Api.DTOs;
 using TravelOrgOS.Domain.Enums;
 using TravelOrgOS.Infrastructure.Services;
@@ -18,6 +22,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpGet]
+    [RequiresPermission("Trip.View")]
     public async Task<IActionResult> GetTrips([FromQuery] string? search, [FromQuery] TripStatus? status, [FromQuery] bool publicOnly = false)
     {
         var trips = await _tripService.GetTripsAsync(GetOrgId(), search, status, publicOnly);
@@ -25,6 +30,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpGet("{id:guid}")]
+    [RequiresPermission("Trip.View")]
     public async Task<IActionResult> GetTrip(Guid id)
     {
         var trip = await _tripService.GetTripByIdAsync(GetOrgId(), id);
@@ -54,6 +60,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpPost]
+    [RequiresPermission("Trip.Create")]
     public async Task<IActionResult> CreateTrip([FromBody] CreateTripDto dto)
     {
         var trip = await _tripService.CreateTripAsync(GetOrgId(), dto);
@@ -61,6 +68,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpPut("{id:guid}")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> UpdateTrip(Guid id, [FromBody] CreateTripDto dto)
     {
         var trip = await _tripService.UpdateTripAsync(GetOrgId(), id, dto);
@@ -69,14 +77,23 @@ public class TripsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/publish")]
+    [RequiresPermission("Trip.Publish")]
     public async Task<IActionResult> PublishTrip(Guid id)
     {
-        var result = await _tripService.PublishTripAsync(GetOrgId(), id);
-        if (!result) return NotFound();
-        return Ok(new { message = "Trip published successfully!" });
+        try
+        {
+            var result = await _tripService.PublishTripAsync(GetOrgId(), id);
+            if (!result) return NotFound();
+            return Ok(new { message = "Trip published successfully!" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpPost("{id:guid}/unpublish")]
+    [RequiresPermission("Trip.Publish")]
     public async Task<IActionResult> UnpublishTrip(Guid id)
     {
         var result = await _tripService.UnpublishTripAsync(GetOrgId(), id);
@@ -85,6 +102,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/duplicate")]
+    [RequiresPermission("Trip.Create")]
     public async Task<IActionResult> DuplicateTrip(Guid id)
     {
         var trip = await _tripService.DuplicateTripAsync(GetOrgId(), id);
@@ -93,6 +111,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpDelete("{id:guid}")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> DeleteTrip(Guid id)
     {
         var result = await _tripService.DeleteTripAsync(GetOrgId(), id);
@@ -102,6 +121,7 @@ public class TripsController : BaseApiController
 
     // Builder Step Endpoints
     [HttpPost("{id:guid}/itinerary")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> SaveItinerary(Guid id, [FromBody] List<ItineraryDayDto> days)
     {
         var result = await _tripService.SaveItineraryDaysAsync(GetOrgId(), id, days);
@@ -109,6 +129,7 @@ public class TripsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/hotels")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> SaveHotels(Guid id, [FromBody] List<TripHotelDto> hotels)
     {
         var result = await _tripService.SaveTripHotelsAsync(GetOrgId(), id, hotels);
@@ -116,13 +137,22 @@ public class TripsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/vehicles")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> SaveVehicles(Guid id, [FromBody] List<TripVehicleDto> vehicles)
     {
-        var result = await _tripService.SaveTripVehiclesAsync(GetOrgId(), id, vehicles);
-        return Ok(result);
+        try
+        {
+            var result = await _tripService.SaveTripVehiclesAsync(GetOrgId(), id, vehicles);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpPost("{id:guid}/vendors")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> SaveVendors(Guid id, [FromBody] List<TripVendorDto> vendors)
     {
         var result = await _tripService.SaveTripVendorsAsync(GetOrgId(), id, vendors);
@@ -130,9 +160,26 @@ public class TripsController : BaseApiController
     }
 
     [HttpPost("{id:guid}/meals")]
+    [RequiresPermission("Trip.Edit")]
     public async Task<IActionResult> SaveMeals(Guid id, [FromBody] List<TripMealDto> meals)
     {
         var result = await _tripService.SaveTripMealsAsync(GetOrgId(), id, meals);
         return Ok(result);
     }
+
+    [HttpPost("{id:guid}/guides")]
+    [RequiresPermission("Trip.Edit")]
+    public async Task<IActionResult> SaveGuides(Guid id, [FromBody] List<TripGuideDto> guides)
+    {
+        try
+        {
+            var result = await _tripService.SaveTripGuidesAsync(GetOrgId(), id, guides);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
+
